@@ -712,7 +712,7 @@ where
 
     if subtitle_config.is_embedded {
         #[cfg(target_os = "windows")]
-        let subtitle_path = subtitle_path.replace("\\", "/").replace(":", "\\:");
+        let subtitle_path = subtitle_path.replace("\\", "/").replacen(":", "\\:", 1);
 
         let filter = format!(
             "subtitles='{}':force_style='FontName={},FontSize={}{}{}'",
