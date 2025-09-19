@@ -25,7 +25,7 @@
 
 ### 问题排查
 - 使用`Qt后端`能解决windows平台字体发虚的问题。也推荐优先使用`Qt后端`保持和开发者相同的构建环境
-- 因为程序使用`ffmpeg`处理音频和视频格式转换，所以需要安装[ffmpeg](https://ffmpeg.org/)
+- 因为程序使用`ffmpeg`处理音频和视频格式转换，所以需要安装[ffmpeg](https://ffmpeg.org/)。`Windows`平台，需要将`ffmpeg`安装到**系统路径**
 - `Linux`平台需要安装`Zenity`或者`Kdialog`，才能打开文件选择框
 
 ### 参考

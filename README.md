@@ -25,7 +25,7 @@ This is a desktop application that uses the Whisper model to transcribe videos o
 
 ### Troubleshooting
 - Using the `Qt backend` can resolve the issue of fuzzy fonts on the Windows platform. It is also recommended to prioritize the `Qt backend` to maintain a consistent build environment with the developers.
-- Since the program uses ffmpeg to handle audio and video format conversion, [ffmpeg](https://ffmpeg.org/) needs to be installed.
+- Since the program uses ffmpeg to handle audio and video format conversion, [ffmpeg](https://ffmpeg.org/) needs to be installed. On the `Windows` platform, you need to install `ffmpeg` to the **system path**.
 - On the `Linux` platform, `Zenity` or `Kdialog` must be installed to open the file selection dialog.
 
 ### Reference
