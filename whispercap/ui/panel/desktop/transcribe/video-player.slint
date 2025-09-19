@@ -345,7 +345,7 @@ export component VideoPlayer inherits Rectangle {
         background: ta.has-hover ? Theme.checked-background : Colors.transparent;
 
         ta := TouchArea {
-            mouse-cursor: MouseCursor.col-resize;
+            mouse-cursor: MouseCursor.row-resize;
             moved => {
                 lp.height = Math.min(Math.max(0px, lp.height - (self.pressed-y - self.mouse-y)), root.height - self.height)
             }
