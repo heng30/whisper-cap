@@ -1,0 +1,44 @@
+import { Theme, Store,  Logic, Util, Icons, PopupIndex } from "../../def.slint";
+import { Dialog, SettingDetailInnerVbox, Select, SettingDetailLabel, SettingDetailInner } from "../../../base/widgets.slint";
+import { TranscribeEntry } from "../../../store.slint";
+
+export component TranscribeSettingDialog inherits Dialog {
+    title: Logic.tr("Transcribe Setting");
+    is-prevent-event-forward: true;
+
+    private property <TranscribeEntry> entry: Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+
+    confirmed => {
+        entry.model-name = model-select.current-value;
+        entry.lang = lang-select.current-value;
+        Logic.start-transcribe(entry);
+    }
+
+    canceled => {
+        self.escape();
+    }
+
+    SettingDetailInner {
+        SettingDetailInnerVbox {
+            SettingDetailLabel {
+                text: Logic.tr("Model");
+            }
+
+            model-select := Select {
+                current-value: self.values.length == 0 ? Logic.tr("Please download or import models") : (entry.model-name.is-empty ? self.values[0] : entry.model-name);
+                values: Logic.available-models();
+            }
+        }
+
+        SettingDetailInnerVbox {
+            SettingDetailLabel {
+                text: Logic.tr("Language");
+            }
+
+            lang-select := Select {
+                current-value: entry.lang;
+                values: Store.whisper-langs;
+            }
+        }
+    }
+}

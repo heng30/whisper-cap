@@ -1,0 +1,637 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme, Icons } from "../../../theme.slint";
+import { TranscribeEntry, PopupIndex, ProgressType, SubtitleEntry, MediaType } from "../../../store.slint";
+import { Theme, Icons, Store, Util, Logic } from "../../def.slint";
+import { NoMessageImg, ConfirmBtn, ConfirmDialogSetting, CenterLayout, TxtEdit, Label, IconBtn, GainFocus, SwitchBtn, LineInput, TextBtn, ProgressBar, ElevatedBtn, Divider, ClickAndEditLabel, PopupActionSetting, PopupActionEntry, Skeleton, SkeletonType, CancelAndConfirmIconsBtn } from "../../../base/widgets.slint";
+
+component HeadBar inherits HorizontalLayout {
+    in-out property <bool> is-progressing: progress-type != ProgressType.None && !is-progress-finished;
+
+    property <TranscribeEntry> current-transcribe-entry: update-current-transcribe-entry(Store.update-transcribe-flag);
+
+    private property <bool> is-progress-finished: progress-type == ProgressType.ConvertToAduioFinished || progress-type == ProgressType.TranscribeFinished || progress-type == ProgressType.AddSubtitleFinished || progress-type == ProgressType.AdjustVoiceFinished || progress-type == ProgressType.TranslateFinished || progress-type == ProgressType.CorrectFinished || progress-type == ProgressType.OptimizeTimestampFinished || progress-type == ProgressType.PartiallyFinished;
+
+    private property <string> progress-text: Logic.progress-type-str(progress-type);
+    private property <float> progress: current-transcribe-entry.progress;
+    private property <ProgressType> progress-type: current-transcribe-entry.progress-type;
+    private property <bool> is-ai-available: Logic.ai-available();
+
+    private property <[PopupActionEntry]> available-popup-action-entries: [
+        {
+            icon: Icons.correction,
+            text: Logic.tr("ai correction"),
+            action: "show-ai-handle-subtitle-setting-dialog",
+            user-data: "correct",
+        },
+        {
+            icon: Icons.list-accept,
+            text: Logic.tr("accept correction"),
+            action: "accept-all-corrected-subtitles",
+        },
+        {
+            icon: Icons.delete,
+            text: Logic.tr("remove correction"),
+            action: "remove-all-corrected-subtitles",
+        },
+        { },
+        {
+            icon: Icons.ai-robot,
+            text: Logic.tr("ai translation"),
+            action: "show-ai-handle-subtitle-setting-dialog",
+            user-data: "translate",
+        },
+        {
+            icon: Icons.delete,
+            text: Logic.tr("remove translation"),
+            action: "remove-all-translated-subtitles",
+        },
+        { },
+        {
+            icon: Icons.optimize-light,
+            text: Logic.tr("optimize timestamp"),
+            action: "optimize-subtitles-timestamp",
+        },
+        {
+            icon: Icons.recover,
+            text: Logic.tr("recover timestamp"),
+            action: "recover-subtitles-timestamp",
+        },
+        { },
+        {
+            icon: Icons.replace,
+            text: Logic.tr("replace text"),
+            action: "show-replace-subtitles-content-dialog",
+        },
+        {
+            icon: Icons.traditional-to-simple-chinese,
+            text: Logic.tr("traditional to simple chinese"),
+            action: "traditional-to-simple-chinese",
+        },
+        {
+            icon: Icons.delete,
+            text: Logic.tr("remove separator"),
+            action: "replace-subtitles-all-separator",
+        },
+        { },
+        {
+            icon: Icons.switch,
+            text: Logic.tr("swap original and translation"),
+            action: "swap-all-original-and-translation",
+        },
+        {
+            icon: Icons.delete,
+            text: Logic.tr("remove subtitle"),
+            action: "remove-all-subtitles",
+        },
+    ];
+
+    private property <[PopupActionEntry]> default-popup-action-entries: [
+        {
+            icon: Icons.optimize-light,
+            text: Logic.tr("optimize timestamp"),
+            action: "optimize-subtitles-timestamp",
+        },
+        {
+            icon: Icons.recover,
+            text: Logic.tr("recover timestamp"),
+            action: "recover-subtitles-timestamp",
+        },
+        { },
+        {
+            icon: Icons.replace,
+            text: Logic.tr("replace text"),
+            action: "show-replace-subtitles-content-dialog",
+        },
+        {
+            icon: Icons.traditional-to-simple-chinese,
+            text: Logic.tr("traditional to simple chinese"),
+            action: "traditional-to-simple-chinese",
+        },
+        {
+            icon: Icons.delete,
+            text: Logic.tr("remove separator"),
+            action: "replace-subtitles-all-separator",
+        },
+        { },
+        {
+            icon: Icons.switch,
+            text: Logic.tr("swap original and translation"),
+            action: "swap-all-original-and-translation",
+        },
+        {
+            icon: Icons.delete,
+            text: Logic.tr("remove subtitle"),
+            action: "remove-all-subtitles",
+        },
+    ];
+
+    function update-current-transcribe-entry(flag: bool) -> TranscribeEntry {
+        return Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+    }
+
+    spacing: Theme.spacing * 4;
+    height: outer-hbox.preferred-height;
+
+    VerticalLayout {
+        alignment: center;
+        width: root.width - outer-hbox.preferred-width - parent.spacing;
+
+        HorizontalLayout {
+            spacing: Theme.spacing * 4;
+
+            ProgressBar {
+                width: 100%;
+                height: 80%;
+                clip: true;
+                font-weight: Theme.bold-font-weight;
+                progress: root.progress;
+                unfinished-progress-color: Theme.thirdly-background;
+                unfinished-text: root.progress-text + " " + self.calc-percent(self.progress) + "%";
+                finished-text: root.progress-text;
+            }
+        }
+    }
+
+    outer-hbox := HorizontalLayout {
+        alignment: end;
+        spacing: Theme.spacing * 8;
+
+        if is-progressing: ElevatedBtn {
+            icon: Icons.stop;
+            colorize: Theme.danger-color;
+            gain-focus-when-clicked: false;
+            is-show-tip: true;
+            tip-position: Bottom;
+            tip: Logic.tr("cancel");
+
+            clicked => {
+                Logic.cancel-progress(current-transcribe-entry.id, progress-type);
+            }
+        }
+
+        Rectangle {
+            height: hbox.preferred-height;
+            border-radius: self.height / 2;
+            background: Theme.thirdly-background;
+            border-width: Theme.default-border-width;
+            border-color: Theme.base-border-color;
+
+            hbox := HorizontalLayout {
+                spacing: Theme.spacing * 2;
+                padding: Theme.padding * 2;
+                padding-left: Theme.padding * 4;
+                padding-right: Theme.padding * 4;
+
+                HorizontalLayout {
+                    spacing: Theme.spacing * 4;
+
+                    IconBtn {
+                        is-show-tip: true;
+                        tip: Logic.tr("transcribe");
+                        icon: Icons.transcirbe;
+                        tip-position: Bottom;
+                        hover-color: Store.setting-preference.is-dark ? Theme.secondary-background.darker(50%) : Theme.secondary-background.darker(5%);
+
+                        clicked => {
+                            Store.current-popup-index = PopupIndex.TranscribeSetting;
+                        }
+                    }
+
+                    if !current-transcribe-entry.is-file-exist: IconBtn {
+                        is-show-tip: true;
+                        tip: Logic.tr("import");
+                        icon: Icons.import;
+                        tip-position: Bottom;
+                        hover-color: Store.setting-preference.is-dark ? Theme.secondary-background.darker(50%) : Theme.secondary-background.darker(5%);
+
+                        clicked => {
+                            Logic.import-media-file();
+                        }
+                    }
+
+                    IconBtn {
+                        is-show-tip: true;
+                        tip: Logic.tr("export subtitle");
+                        icon: Icons.subtitle;
+                        tip-position: Bottom;
+                        hover-color: Store.setting-preference.is-dark ? Theme.secondary-background.darker(50%) : Theme.secondary-background.darker(5%);
+
+                        clicked => {
+                            Store.current-popup-index = PopupIndex.ExportSubtitle;
+                        }
+                    }
+
+                    if current-transcribe-entry.media-type == MediaType.Video: IconBtn {
+                        is-show-tip: true;
+                        tip: Logic.tr("export video");
+                        icon: Icons.export-video;
+                        tip-position: Bottom;
+                        hover-color: Store.setting-preference.is-dark ? Theme.secondary-background.darker(50%) : Theme.secondary-background.darker(5%);
+
+                        clicked => {
+                            Store.current-popup-index = PopupIndex.ExportVideo;
+                        }
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: Theme.spacing * 4;
+
+                    IconBtn {
+                        icon: Icons.more-v;
+                        hover-color: Store.setting-preference.is-dark ? Theme.secondary-background.darker(50%) : Theme.secondary-background.darker(5%);
+
+                        clicked => {
+                            PopupActionSetting.show(self.absolute-position.x + self.width, self.absolute-position.y, is-ai-available ? available-popup-action-entries : default-popup-action-entries);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+component BodyItem inherits Rectangle {
+    in-out property <int> index;
+    in-out property <SubtitleEntry> entry;
+
+    private property <bool> is-unsaved;
+    private property <bool> is-edit;
+    private property <SubtitleEntry> entry-cache;
+    private property update-flag <=> Store.update-subtitles-flag;
+
+    callback clicked <=> ta.clicked;
+
+    function update-unsaved-status() {
+        if (entry.start-timestamp == entry-cache.start-timestamp && entry.end-timestamp == entry-cache.end-timestamp && entry.original-text == entry-cache.original-text && entry.translation-text == entry-cache.translation-text) {
+            root.is-unsaved = false;
+        } else {
+            root.is-unsaved = true;
+        }
+    }
+
+    height: vbox.preferred-height;
+    border-radius: Theme.border-radius;
+    border-width: Theme.default-border-width;
+    background: Theme.secondary-background;
+    border-color: ta.has-hover ? Theme.thirdly-brand-color : Theme.base-border-color.brighter(Theme.is-dark ? 50% : 0%);
+
+    changed update-flag => {
+        entry-cache = entry;
+    }
+
+    init => {
+        entry-cache = entry;
+    }
+
+    ta := GainFocus {
+        clicked => {
+            root.is-edit = false;
+        }
+    }
+
+    vbox := VerticalLayout {
+        alignment: start;
+        spacing: root.is-edit ? Theme.spacing * 2 : 0;
+        padding: root.border-width;
+
+        btns-header := Rectangle {
+            background: Theme.thirdly-background;
+            border-top-left-radius: root.border-radius;
+            border-top-right-radius: root.border-radius;
+
+            HorizontalLayout {
+                alignment: space-between;
+                padding: Theme.padding * 2;
+
+                HorizontalLayout {
+                    spacing: Theme.spacing * 2;
+
+                    Label {
+                        width: self.font-size * 2;
+                        text: index + 1 + ".";
+                        font-weight: Theme.bold-font-weight;
+                    }
+
+                    start-timestamp-input := ClickAndEditLabel {
+                        private property <bool> is-valid-timestamp: Logic.is-valid-subtitle-timestamp(self.text);
+
+                        text: entry.start-timestamp;
+                        is-edit: root.is-edit;
+                        text-color: is-valid-timestamp ? Theme.regular-text-color : Theme.warning-color;
+
+                        edited(text) => {
+                            entry.start-timestamp = text;
+                            update-unsaved-status();
+                        }
+
+                        clicked => {
+                            root.is-edit = true;
+                        }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+
+                        Image {
+                            width: Theme.icon-size;
+                            height: self.width;
+                            source: Icons.arrow-forward;
+                            colorize: Theme.regular-text-color;
+                        }
+                    }
+
+                    end-timestamp-input := ClickAndEditLabel {
+                        private property <bool> is-valid-timestamp: Logic.is-valid-subtitle-timestamp(self.text);
+                        text: entry.end-timestamp;
+                        is-edit: root.is-edit;
+                        text-color: is-valid-timestamp ? Theme.regular-text-color : Theme.warning-color;
+
+                        edited(text) => {
+                            entry.end-timestamp = text;
+                            update-unsaved-status();
+                        }
+
+                        clicked => {
+                            root.is-edit = true;
+                        }
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: Theme.padding * 8;
+
+                    HorizontalLayout {
+                        spacing: Theme.padding * 4;
+
+                        if is-unsaved: CancelAndConfirmIconsBtn {
+                            is-show-tip: false;
+
+                            cancelled => {
+                                entry.original-text = entry-cache.original-text;
+                                entry.start-timestamp = entry-cache.start-timestamp;
+                                entry.end-timestamp = entry-cache.end-timestamp;
+
+                                orginal-input.text = entry.original-text;
+                                start-timestamp-input.text = entry.start-timestamp;
+                                end-timestamp-input.text = entry.end-timestamp;
+
+                                update-unsaved-status();
+                            }
+
+                            confirmed => {
+                                is-unsaved = false;
+                                root.is-edit = false;
+                                Logic.save-subtitle(index, entry);
+                            }
+                        }
+
+                        IconBtn {
+                            is-show-tip: true;
+                            tip: Logic.tr("play");
+                            icon: Icons.control-start;
+
+                            clicked => {
+                                if (Logic.current-transcribe-entry().media-type == MediaType.Video) {
+
+                                    Logic.video-player-start(
+                                        Logic.srt-timestamp-to-ms-second(entry.start-timestamp) / 1000.0);
+                                } else {
+                                    Logic.audio-player-start(
+                                        Logic.srt-timestamp-to-ms-second(entry.start-timestamp) / 1000.0);
+                                }
+                            }
+                        }
+
+                        if !root.is-edit: IconBtn {
+                            is-show-tip: true;
+                            tip: Logic.tr("edit");
+                            icon: Icons.edit-rect;
+
+                            clicked => {
+                                root.is-edit = true;
+                            }
+                        }
+
+                        IconBtn {
+                            icon: Icons.more-v;
+                            clicked => {
+                                PopupActionSetting.show(self.absolute-position.x + self.width, self.absolute-position.y, [
+                                    {
+                                        icon: Icons.cell-insert-above,
+                                        text: Logic.tr("Insert Above"),
+                                        action: "insert-above-subtitle",
+                                        user-data: index,
+                                    },
+                                    {
+                                        icon: Icons.cell-insert-below,
+                                        text: Logic.tr("Insert Below"),
+                                        action: "insert-below-subtitle",
+                                        user-data: index,
+                                    },
+                                    {
+                                        icon: Icons.delete,
+                                        text: Logic.tr("Remove"),
+                                        action: "remove-subtitle",
+                                        user-data: index,
+                                    },
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        subtitle-vbox := VerticalLayout {
+            padding: Theme.padding * 2;
+            spacing: root.is-edit ? Theme.spacing * 2 : 0;
+
+            HorizontalLayout {
+                alignment: start;
+                spacing: entry.translation-text.is-empty ? 0 : Theme.spacing * 2;
+
+                orginal-input := ClickAndEditLabel {
+                    use-fixed-width: true;
+                    width: parent.width - parent.spacing;
+                    text: entry.original-text;
+                    is-edit: root.is-edit;
+                    wrap: word-wrap;
+                    text-color: Theme.primary-text-color;
+
+                    edited(text) => {
+                        entry.original-text = text;
+                        update-unsaved-status();
+                    }
+
+                    clicked => {
+                        root.is-edit = true;
+                    }
+                }
+            }
+
+            if !entry.correction-text.is-empty: Rectangle {
+                background: Theme.thirdly-background;
+                border-radius: Theme.border-radius;
+
+                HorizontalLayout {
+                    alignment: space-between;
+                    spacing: Theme.spacing * 2;
+                    padding: Theme.padding * 2;
+
+                    HorizontalLayout {
+                        spacing: Theme.spacing * 2;
+
+                        VerticalLayout {
+                            alignment: center;
+
+                            Image {
+                                width: Theme.default-font-size;
+                                height: self.width;
+                                source: Icons.polish;
+                                colorize: Theme.warning-color;
+                            }
+                        }
+
+                        Label {
+                            text: entry.correction-text;
+                            wrap: word-wrap;
+                        }
+                    }
+
+                    CancelAndConfirmIconsBtn {
+                        cancel-tip: Logic.tr("reject");
+                        confirm-tip: Logic.tr("accept");
+                        is-hide-confirm-btn: entry.original-text == entry.correction-text;
+
+                        cancelled => {
+                            Logic.reject-subtitle-correction(index);
+                        }
+
+                        confirmed => {
+                            Logic.accept-subtitle-correction(index);
+                        }
+                    }
+                }
+            }
+
+            if !entry.translation-text.is-empty:  VerticalLayout {
+                padding-top: root.is-edit ? 0 : Theme.padding * 2;
+
+                Rectangle {
+                    background: Theme.thirdly-background;
+                    border-radius: Theme.border-radius;
+
+                    HorizontalLayout {
+                        alignment: space-between;
+                        spacing: Theme.spacing * 2;
+                        padding: Theme.padding * 2;
+
+                        HorizontalLayout {
+                            spacing: Theme.spacing * 2;
+
+                            VerticalLayout {
+                                alignment: center;
+
+                                Image {
+                                    width: Theme.default-font-size;
+                                    height: self.width;
+                                    source: Icons.translation;
+                                    colorize: Theme.thirdly-brand-color;
+                                }
+                            }
+
+                            Label {
+                                text: entry.translation-text;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+component Body inherits ScrollView {
+    in-out property <bool> is-progressing;
+
+    private property <TranscribeEntry> current-transcribe-entry: Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+
+    VerticalLayout {
+        spacing: Theme.spacing * 2;
+
+        if is-progressing && current-transcribe-entry.subtitle-entries.length <= 0: Rectangle {
+            height: 200px;
+
+            Skeleton {
+                width: parent.width;
+                height: parent.height;
+                type: SkeletonType.List;
+            }
+        }
+
+        for entry[index] in current-transcribe-entry.subtitle-entries: BodyItem {
+            index: index;
+            entry: entry;
+            width: root.width - Theme.scrollbar-size;
+        }
+    }
+}
+
+component StartTranscribeField inherits VerticalLayout {
+    CenterLayout {
+        NoMessageImg {
+            width: root.width;
+        }
+
+        HorizontalLayout {
+            alignment: center;
+
+            ConfirmBtn {
+                icon: Icons.transcirbe;
+                text: Logic.tr("Start transcribe");
+                auto-size-vpadding: Theme.padding * 2;
+
+                clicked => {
+                    Store.current-popup-index = PopupIndex.TranscribeSetting;
+                }
+            }
+        }
+    }
+}
+
+export component Transcribe inherits Rectangle {
+    in-out property is-progressing <=> hb.is-progressing;
+
+    private property <TranscribeEntry> current-transcribe-entry: Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+
+    background: Theme.secondary-background;
+    border-radius: Theme.border-radius;
+
+    VerticalLayout {
+        padding: Theme.padding * 2;
+        padding-top: Theme.padding * 4;
+        spacing: Theme.spacing * 4;
+
+        vbox := VerticalLayout {
+            alignment: center;
+
+            hb := HeadBar { }
+        }
+
+        hbox := HorizontalLayout {
+            height: parent.height - vbox.preferred-height - parent.spacing - parent.padding - parent.padding-top;
+            spacing: Theme.spacing * 2;
+
+            private property <bool> is-show-no-message: current-transcribe-entry.subtitle-entries.length == 0 && !hb.is-progressing;
+
+            Rectangle {
+                if is-show-no-message: StartTranscribeField { }
+                if !is-show-no-message: Body {
+                    is-progressing: hb.is-progressing;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,75 @@
+import "fonts/SourceHanSerifCN.ttf";
+import "fonts/SourceHanSansCN.otf";
+
+import { Util } from "util.slint";
+import { Logic } from "logic.slint";
+import { Theme, Icons } from "theme.slint";
+import { Store, DeviceType } from "store.slint";
+import { DesktopPanel } from "panel/desktop/panel.slint";
+import { Toast, IconsDialogSetting, IconsDialog, ConfirmDialog, ConfirmDialogSetting, Blanket, LandingPage, AboutSetting, ToastSetting, PopupActionSetting, ConfirmDialogSetting } from "base/widgets.slint";
+
+export component AppWindow inherits Window {
+    preferred-width: Theme.default-width;
+    preferred-height: Theme.default-height;
+    default-font-size: Theme.default-font-size;
+    default-font-weight: Theme.normal-font-weight;
+    default-font-family: Theme.default-font-family;
+    background: Theme.base-background;
+    icon: Icons.brand;
+    title: AboutSetting.app-name;
+    no-frame: Store.setting-preference.no-frame;
+    always-on-top: Store.setting-preference.always-on-top;
+
+    DesktopPanel { }
+
+    if IconsDialogSetting.show || ConfirmDialogSetting.show: Blanket {
+        clicked => {
+            IconsDialogSetting.show = false;
+            ConfirmDialogSetting.show = false;
+        }
+    }
+
+    if IconsDialogSetting.show: IconsDialog {
+        is-prevent-event-forward: true;
+        column-count: Store.device-type == DeviceType.Desktop ? 6 : 5;
+        icon-size: Store.device-type == DeviceType.Desktop ? Theme.icon-size * 3 : Theme.icon-size;
+        select-index(handle-type, index, user-data) => {
+        }
+    }
+
+    if ConfirmDialogSetting.show: ConfirmDialog {
+        is-prevent-event-forward: true;
+        width: Math.min(root.width * 0.9, self.vbox-preferred-width * 2);
+    }
+
+    if !ToastSetting.is-timeout || ToastSetting.is-hover: Toast {
+        x: root.width / 2 - self.width / 2;
+        y: 50px;
+        width: Math.min(root.width * 80%, self.preferred-width);
+        clicked => {
+            Logic.copy-to-clipboard(ToastSetting.text);
+        }
+    }
+
+    if Store.is-show-landing-page: LandingPage {
+        details: [
+            {
+                picture: Icons.landing-account,
+                description: Store.is-cn ? "使用whisper模型，将视频或音频转录为字幕" : "Uses whisper models to transcribe videos or audio into subtitles",
+            },
+            {
+                picture: Icons.landing-send,
+                description: Store.is-cn ? "编辑和修改字幕、AI翻译字幕、AI矫正字幕和播放音频或视频辅助矫正字幕" : "Editing and modifying subtitles, AI translation of subtitles, AI correction of subtitles, and playing audio or video to assist in subtitle correction",
+            },
+            {
+                picture: Icons.landing-welcome,
+                description: Store.is-cn ? "欢迎使用" : "Welcome to use",
+            }
+        ];
+        skipped => {
+            Store.is-show-landing-page = false;
+        }
+    }
+}
+
+export { Util, Logic, Store, Theme, Icons, AboutSetting, PopupActionSetting, ToastSetting, ConfirmDialogSetting }

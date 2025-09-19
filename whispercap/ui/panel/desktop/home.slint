@@ -1,0 +1,180 @@
+import { Theme, Icons } from "../../theme.slint";
+import { Util } from "../../util.slint";
+import { Logic } from "../../logic.slint";
+import { Store, TranscribeEntry, TabIndex } from "../../store.slint";
+import { TextList, Divider, Banner, ConfirmBtn, Label, TextBtn, Link } from "../../base/widgets.slint";
+import { HorizontalSettingIconsBar }  from "../setting/desktop.slint";
+
+import { TranscribePanel } from "transcribe/panel.slint";
+import { Model } from "model.slint";
+
+component LeftPanel inherits Rectangle {
+    background: Theme.secondary-background;
+    border-radius: Theme.border-radius * 2;
+
+    private property <TranscribeEntry> current-transcribe-entry: Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+
+    TextList {
+        is-use-random-icon: true;
+        entries: Logic.gen-transcribe-sidebar-entries(Store.update-transcribe-sidebar-flag, Store.transcribe-entries);
+        selected-id: current-transcribe-entry.id;
+
+        clicked(index) => {
+            Logic.switch-sidebar-entry(Store.selected-transcribe-sidebar-index, index);
+        }
+
+        search(value) => {
+            Logic.search-sidebar(value);
+        }
+
+        clicked-add-icon => {
+            Logic.new-transcribe-entry();
+        }
+
+        clicked-right-icon(index) => {
+            self.popup-action-entries = [
+                {
+                    icon: Icons.edit,
+                    text: Logic.tr("Rename"),
+                    action: "show-rename-transcribe-dialog",
+                    user-data: index,
+                },
+                {
+                    icon: Icons.delete-fill,
+                    text: Logic.tr("Remove"),
+                    action: "remove-transcribe-entry",
+                    user-data: index,
+                },
+            ];
+        }
+    }
+}
+
+component Banners inherits VerticalLayout {
+    in-out property <bool> is-show-import-banner;
+    in-out property <bool> is-show-download-ffmpeg-banner;
+    in-out property <string> file-path;
+
+    callback close-ffmpeg-banner();
+    callback close-import-banner();
+
+    spacing: Theme.spacing * 2;
+
+    if is-show-download-ffmpeg-banner: Banner {
+        width: root.width;
+
+        HorizontalLayout {
+            spacing: Theme.spacing * 4;
+
+            Label {
+                color: Colors.white;
+                text: Logic.tr("No found ffmpeg and ffprobe.");
+                font-weight: Theme.bold-font-weight;
+            }
+
+            Link {
+                is-show-icon: true;
+                text: Logic.tr("Download ffmpeg and ffprobe");
+                font-weight: Theme.bold-font-weight;
+
+                clicked => {
+                    Util.open-url("Default", "https://www.ffmpeg.org/download.html");
+                }
+            }
+        }
+
+        close => {
+            is-show-download-ffmpeg-banner = false;
+            close-ffmpeg-banner();
+        }
+    }
+
+    if is-show-import-banner: Banner {
+        width: root.width;
+
+        HorizontalLayout {
+            Label {
+                color: Colors.white;
+                text: Logic.tr("No found") + " " + file-path;
+                font-weight: Theme.bold-font-weight;
+            }
+
+            import-btn := TextBtn {
+                is-ltr: false;
+                text: Logic.tr("Import file");
+                text-color: Theme.link-text-color;
+                icon: Icons.import;
+                font-weight: Theme.bold-font-weight;
+
+                clicked => {
+                    Logic.import-media-file();
+                }
+            }
+        }
+
+        close => {
+            is-show-import-banner = false;
+            close-import-banner();
+        }
+    }
+}
+
+component RightPanel inherits VerticalLayout {
+    private property <TranscribeEntry> current-transcribe-entry: Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+    private property <bool> is-show-import-banners: !current-transcribe-entry.is-file-exist && Store.selected-transcribe-sidebar-index >= 0;
+    private property <bool> is-show-banners: is-show-import-banners || !Store.ffmpeg-is-installed;
+
+    if is-show-banners: Banners {
+        padding-bottom: Theme.spacing * 2;
+        is-show-import-banner: is-show-import-banners;
+        is-show-download-ffmpeg-banner: !Store.ffmpeg-is-installed;
+        file-path: current-transcribe-entry.file-path;
+
+        close-import-banner => {
+            if (!self.is-show-download-ffmpeg-banner && !self.is-show-import-banner) {
+                is-show-banners = false;
+            }
+        }
+
+        close-ffmpeg-banner => {
+            if (!self.is-show-download-ffmpeg-banner && !self.is-show-import-banner) {
+                is-show-banners = false;
+            }
+        }
+    }
+
+    TranscribePanel { }
+}
+
+export component Transcribe inherits Rectangle {
+    lp := LeftPanel {
+        x: 0;
+        width: root.width * 0.15;
+    }
+
+    mp := Rectangle {
+        x: lp.width;
+        width: Theme.padding;
+        border-radius: self.width / 2;
+        background: ta.has-hover ? Theme.checked-background : Colors.transparent;
+
+        ta := TouchArea {
+            mouse-cursor: MouseCursor.col-resize;
+            moved => {
+                lp.width = Math.min(Math.max(0px, lp.width - (self.pressed-x - self.mouse-x)), root.width - self.width - root.padding * 2)
+            }
+        }
+    }
+
+    RightPanel {
+        x: mp.x + mp.width;
+        width: root.width - root.padding * 2 - self.x;
+    }
+}
+
+export component Home inherits VerticalLayout {
+    padding: Theme.padding;
+
+    if Store.current-tab-index == TabIndex.Home: Transcribe { }
+    if Store.current-tab-index == TabIndex.Model: Model { }
+}

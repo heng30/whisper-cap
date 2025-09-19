@@ -1,0 +1,71 @@
+import { Theme, Icons } from "../../../theme.slint";
+import { Util } from "../../../util.slint";
+import { Logic } from "../../../logic.slint";
+import { Store, VideoPlayerSetting, TranscribeEntry } from "../../../store.slint";
+import { AudioControl, Label } from "../../../base/widgets.slint";
+
+export component AudioPlayer inherits Rectangle {
+    property <TranscribeEntry> current-transcribe-entry: update-current-transcribe-entry(Store.update-audio-player-flag);
+    private property <VideoPlayerSetting> setting: current-transcribe-entry.video-player-setting;
+
+    function update-current-transcribe-entry(flag: bool) -> TranscribeEntry {
+        return Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+    }
+
+    changed current-transcribe-entry => {
+        setting = current-transcribe-entry.video-player-setting;
+        ac.progress = setting.current-time * 100.0 / setting.end-time;
+
+        if (setting.is-playing && !ac.is-playing) {
+            ac.is-playing = true;
+        } else if (!setting.is-playing && ac.is-playing) {
+            ac.is-playing = false;
+        }
+    }
+
+    background: Theme.thirdly-background;
+    border-radius: Theme.border-radius;
+
+    VerticalLayout {
+        ac := AudioControl {
+            background: Theme.thirdly-background;
+            is-playing: setting.is-playing;
+            is-hide-speed-btn: true;
+            is-hide-status-btn: true;
+            is-hide-tree-control-btns: true;
+            current-time: Util.seconds-to-media-timestamp(setting.current-time);
+            end-time: Util.seconds-to-media-timestamp(setting.end-time);
+            progress: setting.current-time * 100.0 / setting.end-time;
+            current-sound: setting.volume * 100.0;
+
+            progress-pressed(v) => {
+                Logic.before-change-audio-player-position();
+            }
+
+            progress-release(v) => {
+                if (Logic.media-is-finished()) {
+                    Logic.audio-player-start(v / 100.0 * setting.end-time);
+                } else {
+                    Logic.change-audio-player-position(v / 100.0 * setting.end-time);
+                }
+            }
+
+            sound-changed(sound) => {
+                Logic.change-audio-player-sound(sound / 100.0);
+            }
+
+            play => {
+                if (Logic.media-is-finished()) {
+                    setting.current-time = 0.0;
+                }
+                debug("playing audio. timestamp: ", setting.current-time);
+                Logic.audio-player-start(setting.current-time);
+            }
+
+            stop => {
+                debug("stopping audio. start timestamp: ", setting.current-time, "end timestamp: ", setting.end-time);
+                Logic.audio-player-stop(setting.current-time);
+            }
+        }
+    }
+}

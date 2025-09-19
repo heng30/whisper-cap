@@ -1,0 +1,92 @@
+import { Theme, Store,  Logic, Util, Icons, PopupIndex } from "../../def.slint";
+import { Dialog, SettingDetailInnerVbox, Select, SettingDetailLabel, RadioBtn, CheckBtn, LineInput } from "../../../base/widgets.slint";
+import { TranscribeEntry } from "../../../store.slint";
+import { Label } from "../../../base/label.slint";
+
+export component ExportVideoDialog inherits Dialog {
+    title: Logic.tr("Export Video");
+    is-prevent-event-forward: true;
+
+    private property <TranscribeEntry> entry: Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+    private property <bool> is-embedded: true;
+    private property <bool> is-adjust-volumn;
+    private property <float> adjust-volumn: 1.0;
+
+    confirmed => {
+        Logic.export-video({
+            id: entry.id,
+            file-path: entry.file-path,
+            is-embedded: root.is-embedded,
+            is-adjust-volume: is-adjust-volumn,
+            adjust-volume-times: root.adjust-volumn,
+            inner: entry.subtitle-setting,
+        });
+    }
+
+    canceled => {
+        self.escape();
+    }
+
+    VerticalLayout {
+        padding: Theme.padding * 4;
+        spacing: Theme.spacing * 8;
+
+        HorizontalLayout {
+            HorizontalLayout {
+                width: 50%;
+                embedded-radio := RadioBtn {
+                    text: Logic.tr("Embedded subtitle");
+                    checked: is-embedded;
+                    check => {
+                        is-embedded = true;
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                width: 50%;
+                attach-radio := RadioBtn {
+                    text: Logic.tr("External subtitle");
+                    checked: !is-embedded;
+                    check => {
+                        is-embedded = false;
+                    }
+                }
+            }
+        }
+
+        VerticalLayout {
+            CheckBtn {
+                text: Logic.tr("Adjust volume");
+                checked: is-adjust-volumn;
+
+                toggled => {
+                    is-adjust-volumn = !is-adjust-volumn;
+                }
+            }
+
+            if is-adjust-volumn: HorizontalLayout {
+                alignment: start;
+                spacing: Theme.spacing * 2;
+
+                Label {
+                    text: Logic.tr("Standardize the volume and adjust it to");
+                }
+
+                LineInput {
+                    input-type: InputType.decimal;
+                    width: self.font-size * 3;
+                    text: root.adjust-volumn;
+
+                    edited => {
+                        root.adjust-volumn = self.text.to-float();
+                    }
+                }
+
+                Label {
+                    text: Logic.tr("times") + ".";
+                }
+            }
+        }
+    }
+}

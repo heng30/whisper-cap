@@ -1,0 +1,363 @@
+import { GroupBox, ScrollView } from "std-widgets.slint";
+import { Theme, Icons } from "../../../theme.slint";
+import { Util } from "../../../util.slint";
+import { Logic } from "../../../logic.slint";
+import { Store, VideoPlayerSetting, SubtitleSetting, TranscribeEntry } from "../../../store.slint";
+import { GroupBox, CheckBtn, Label, VideoControl, SettingDetailInner, SettingDetailInnerVbox, SettingDetailLabel, RadioBtn, CancelBtn, ConfirmBtn, SettingDetailSwitch, Label, LineInput, Select, GainFocus } from "../../../base/widgets.slint";
+
+component Player inherits Rectangle {
+    property <TranscribeEntry> current-transcribe-entry: update-current-transcribe-entry(Store.update-video-player-flag);
+    private property <VideoPlayerSetting> setting: current-transcribe-entry.video-player-setting;
+    private property <SubtitleSetting> subtitle-setting: current-transcribe-entry.subtitle-setting;
+
+    function update-current-transcribe-entry(flag: bool) -> TranscribeEntry {
+        return Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+    }
+
+    changed current-transcribe-entry => {
+        setting = current-transcribe-entry.video-player-setting;
+        subtitle-setting = current-transcribe-entry.subtitle-setting;
+
+        vc.progress = setting.current-time * 100.0 / setting.end-time;
+
+        if (setting.is-playing && !vc.is-playing) {
+            vc.is-playing = true;
+        } else if (!setting.is-playing && vc.is-playing) {
+            vc.is-playing = false;
+        }
+    }
+
+    background: Theme.thirdly-background;
+    border-radius: Theme.border-radius;
+    clip: true;
+
+    vbox := VerticalLayout {
+        Rectangle {
+            private property <float> width-height-rate: self.width / self.height;
+
+            width: parent.width;
+            height: parent.height - vc.preferred-height;
+            background: Theme.dark-text-color;
+            clip: true;
+
+            img := Image {
+                private property <float> img-width-height-rate: self.source.width / self.source.height;
+
+                function update-size() {
+                    if (parent.width-height-rate > img-width-height-rate) {
+                        self.height = parent.height;
+                        self.width = self.height * img-width-height-rate;
+                    } else {
+                        self.width = parent.width;
+                        self.height = self.width / img-width-height-rate;
+                    }
+                }
+
+                source: Logic.update-video-player-image(Store.update-video-player-flag, setting.img);
+                image-fit: ImageFit.contain;
+
+                changed source => {
+                    update-size();
+                }
+
+                init => {
+                    update-size();
+                }
+            }
+
+            VerticalLayout {
+                visible: !sub-lb.text.is-empty && vc.enable-subtitle;
+                y: img.y + img.height - sub-vbox.preferred-height - sub-lb.font-size;
+
+                sub-vbox := VerticalLayout {
+                    spacing: Theme.spacing / 2;
+
+                    private property <float> ffmpeg-relative-font-size: subtitle-setting.font-size * (img.source.height / 480);
+                    private property <length> relative-font-size: ffmpeg-relative-font-size * (img.height / img.source.height);
+                    private property <[string]> texts: Logic.get-current-subtitle(current-transcribe-entry.subtitle-entries, setting.current-time, Store.update-video-player-flag);
+
+                    HorizontalLayout {
+                        alignment: center;
+
+                        Rectangle {
+                            clip: true;
+                            background: subtitle-setting.enable-background ? (subtitle-setting.is-white-font-color ? black : white) : transparent;
+                            height: sub-lb.preferred-height;
+                            width: sub-lb.preferred-width;
+
+                            sub-lb := Label {
+                                font-size: relative-font-size;
+                                font-family: subtitle-setting.font-name;
+                                horizontal-alignment: center;
+                                color: subtitle-setting.is-white-font-color ? white : black;
+                                text: texts[0];
+                                stroke-style: TextStrokeStyle.outside;
+                                stroke: subtitle-setting.is-white-font-color ? black : white;
+                                stroke-width: 1px;
+                                wrap: word-wrap;
+                                width: min(self.preferred-width, root.width);
+                            }
+                        }
+                    }
+
+                    if !texts[1].is-empty: HorizontalLayout {
+                        alignment: center;
+
+                        Rectangle {
+                            clip: true;
+                            background: subtitle-setting.enable-background ? (subtitle-setting.is-white-font-color ? black : white) : transparent;
+                            height: sub-lb-trans.preferred-height;
+                            width: sub-lb-trans.preferred-width;
+
+                            sub-lb-trans := Label {
+                                font-size: relative-font-size;
+                                font-family: subtitle-setting.font-name;
+                                horizontal-alignment: center;
+                                color: subtitle-setting.is-white-font-color ? white : black;
+                                text: texts[1];
+                                stroke-style: TextStrokeStyle.outside;
+                                stroke: subtitle-setting.is-white-font-color ? black : white;
+                                stroke-width: 1px;
+                                wrap: word-wrap;
+                                width: min(self.preferred-width, root.width);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if !vc.is-playing: Rectangle {
+                background: Colors.gray;
+                opacity: 0.4;
+            }
+
+            if !vc.is-playing: Rectangle {
+                width: Theme.icon-size * 6;
+                height: Theme.icon-size * 6;
+                background: Colors.white;
+                opacity: player-ta.has-hover ? 0.5 : 0.4;
+                border-radius: self.width / 2;
+
+                Image {
+                    width: Theme.icon-size * 4;
+                    height: self.width;
+                    source: Icons.control-start;
+                    colorize: Theme.icon-color;
+                }
+            }
+
+            player-ta := TouchArea {
+                clicked => {
+                    if (setting.is-playing) {
+                        vc.stop();
+                    } else {
+                        vc.play();
+                    }
+                }
+            }
+        }
+
+        vc := VideoControl {
+            is-hide-prev-btn: true;
+            is-hide-next-btn: true;
+            is-hide-speed-btn: true;
+            is-hide-full-screen-btn: true;
+            is-hide-control-status-btn: true;
+            is-playing: false;
+            enable-subtitle: true;
+            current-time: Util.seconds-to-media-timestamp(setting.current-time);
+            end-time: Util.seconds-to-media-timestamp(setting.end-time);
+            progress: setting.current-time * 100.0 / setting.end-time;
+            current-sound: setting.volume * 100.0;
+
+            private property <string> file-name: Util.file-name(current-transcribe-entry.file-path);
+
+            if !file-name.is-empty: VerticalLayout {
+                padding-left: Theme.padding * 4;
+
+                Label {
+                    overflow: elide;
+                    text: current-transcribe-entry.is-file-exist ? file-name : Logic.tr("No found") + " " + file-name;
+                    color: current-transcribe-entry.is-file-exist ? Theme.regular-text-color : Theme.danger-color;
+                }
+            }
+
+            progress-release(v) => {
+                Logic.change-video-player-position(v / 100.0 * setting.end-time);
+            }
+
+            progress-pressed(v) => {
+                Logic.before-change-video-player-position();
+            }
+
+            sound-changed(sound) => {
+                Logic.change-video-player-sound(sound / 100.0);
+            }
+
+            play => {
+                if (Logic.media-is-finished()) {
+                    setting.current-time = 0.0;
+                }
+                debug("playing video. timestamp: ", setting.current-time);
+                Logic.video-player-start(setting.current-time);
+            }
+
+            stop => {
+                debug("stop playing video. timestamp: ", setting.current-time);
+                Logic.video-player-stop();
+            }
+        }
+    }
+}
+
+component Subtitle inherits Rectangle {
+    background: Theme.secondary-background;
+
+    private property <SubtitleSetting> setting: Store.transcribe-entries[Store.selected-transcribe-sidebar-index].subtitle-setting;
+    private property <bool> is-white-font-color: setting.is-white-font-color;
+    private property <bool> enable-background: setting.enable-background;
+
+    changed setting => {
+        fonts-select.current-value = setting.font-name;
+        font-size-lineedit.text = setting.font-size;
+        root.is-white-font-color = setting.is-white-font-color;
+        root.enable-background = setting.enable-background;
+    }
+
+    callback update-subtitle-setting(setting: SubtitleSetting);
+
+    public function get() -> SubtitleSetting {
+        return {
+            font-name: fonts-select.current-value,
+            font-size: font-size-lineedit.text.to-float(),
+            is-white-font-color: root.is-white-font-color,
+            enable-background: root.enable-background,
+        };
+    }
+
+    VerticalLayout {
+        padding-top: Theme.padding * 6;
+
+        GroupBox {
+            title: Logic.tr("Subtitle Setting");
+            title-background: Theme.secondary-background;
+
+            GainFocus { }
+
+            ScrollView {
+                vbox := VerticalLayout {
+                    width: parent.width;
+                    padding: Theme.padding * 4;
+                    padding-top: Theme.padding * 8;
+                    spacing: Theme.spacing * 4;
+                    alignment: start;
+
+                    SettingDetailInnerVbox {
+                        font-size-txt := SettingDetailLabel {
+                            text: Logic.tr("Font size");
+                        }
+
+                        font-size-lineedit := LineInput {
+                            input-type: number;
+                            placeholder-text: "10 ~ 50";
+                            text: setting.font-size;
+
+                            accepted => {
+                                update-subtitle-setting(get());
+                            }
+                        }
+                    }
+
+                    SettingDetailInnerVbox {
+                        SettingDetailLabel {
+                            text: Logic.tr("Font name");
+                        }
+
+                        fonts-select := Select {
+                            background: Theme.thirdly-background;
+                            values: Store.system-fonts;
+                            current-value: setting.font-name;
+
+                            selected => {
+                                update-subtitle-setting(get());
+                            }
+                        }
+                    }
+
+                    SettingDetailInnerVbox {
+                        SettingDetailLabel {
+                            text: Logic.tr("Font color");
+                        }
+
+                        HorizontalLayout {
+                            HorizontalLayout {
+                                width: 50%;
+
+                                RadioBtn {
+                                    text: Logic.tr("white");
+                                    checked: is-white-font-color;
+                                    check => {
+                                        is-white-font-color = true;
+                                        update-subtitle-setting(get());
+                                    }
+                                }
+                            }
+
+                            RadioBtn {
+                                text: Logic.tr("black");
+                                checked: !is-white-font-color;
+                                check => {
+                                    is-white-font-color = false;
+                                    update-subtitle-setting(get());
+                                }
+                            }
+                        }
+                    }
+
+                    SettingDetailInnerVbox {
+                        background-btn := CheckBtn {
+                            text: setting.enable-background ? Logic.tr("Enabled background") : Logic.tr("Disabled background");
+                            checked: root.enable-background;
+
+                            toggled => {
+                                root.enable-background = !root.enable-background;
+                                update-subtitle-setting(get());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component VideoPlayer inherits Rectangle {
+    lp := Player {
+        y: 0;
+        height: root.height * 0.6;
+        width: root.width;
+    }
+
+    mp := Rectangle {
+        y: lp.height;
+        height: Theme.padding;
+        border-radius: self.height / 2;
+        background: ta.has-hover ? Theme.checked-background : Colors.transparent;
+
+        ta := TouchArea {
+            mouse-cursor: MouseCursor.col-resize;
+            moved => {
+                lp.height = Math.min(Math.max(0px, lp.height - (self.pressed-y - self.mouse-y)), root.height - self.height)
+            }
+        }
+    }
+
+    Subtitle {
+        y: mp.y + mp.height;
+        height: root.height - root.padding * 2 - self.y;
+
+        update-subtitle-setting(setting) => {
+            Logic.update-video-subtitle-setting(setting);
+        }
+    }
+}

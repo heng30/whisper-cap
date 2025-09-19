@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=whispercap
+Exec=/usr/local/bin/whispercap
+Icon=whispercap
+Terminal=false
+Type=Application
+Categories=Utility;Development;
+StartupNotify=true
+StartupWMClass=whispercap
+Comment=Description: uses whisper models to transcribe videos or audio into subtitles.（使用whisper模型将视频或音频转录为字幕）

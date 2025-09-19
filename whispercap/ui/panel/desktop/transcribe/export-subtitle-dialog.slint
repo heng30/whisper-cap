@@ -1,0 +1,59 @@
+import { Theme, Store,  Logic, Util, Icons, PopupIndex } from "../../def.slint";
+import { Dialog, SettingDetailInnerVbox, Select, SettingDetailLabel, RadioBtn } from "../../../base/widgets.slint";
+import { TranscribeEntry } from "../../../store.slint";
+
+export component ExportSubtitleDialog inherits Dialog {
+    title: Logic.tr("Export Subtitle");
+    is-prevent-event-forward: true;
+
+    private property <string> subtitle: "srt";
+
+    confirmed => {
+        Logic.export-subtitles(subtitle);
+    }
+
+    canceled => {
+        self.escape();
+    }
+
+    VerticalLayout {
+        padding: Theme.padding * 4;
+        padding-top: Theme.padding * 8;
+        spacing: Theme.spacing * 4;
+
+        HorizontalLayout {
+            HorizontalLayout {
+                width: 33%;
+                srt-radio := RadioBtn {
+                    text: "srt";
+                    checked: subtitle == "srt";
+                    check => {
+                        subtitle = "srt";
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                width: 33%;
+                vtt-radio := RadioBtn {
+                    text: "vtt";
+                    checked: subtitle == "vtt";
+                    check => {
+                        subtitle = "vtt";
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                width: 33%;
+                plain-radio := RadioBtn {
+                    text: "txt";
+                    checked: subtitle == "txt";
+                    check => {
+                        subtitle = "txt";
+                    }
+                }
+            }
+        }
+    }
+}

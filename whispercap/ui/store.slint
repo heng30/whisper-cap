@@ -1,0 +1,328 @@
+export enum DeviceType {
+    Desktop,
+    Mobile,
+    Web,
+}
+
+export enum TabIndex {
+    Home,
+    Model,
+}
+
+export enum PopupIndex {
+    Setting,
+    About,
+    Donate,
+    Help,
+    None,
+    Backup,
+    Recover,
+
+    TranscribeRename,
+    SubtitlesReplace,
+    TranscribeSetting,
+    ExportSubtitle,
+    ExportVideo,
+    AiHandleSubtitleSetting,
+}
+
+export enum SettingDetailIndex {
+    Preference,
+    Model,
+}
+
+export enum MobileTabIndex {
+    Home,
+    Setting,
+}
+
+export enum MobileSettingDetailIndex {
+    Home,
+    Preference,
+    Proxy,
+    Donate,
+    About,
+    Help,
+}
+
+export struct SettingPreference {
+    win-width: string,
+    win-height: string,
+    font-size: string,
+    font-family: string,
+    language: string,
+    always-on-top: bool,
+    no-frame: bool,
+    is-dark: bool,
+}
+
+export struct SettingModel {
+    model-name: string,
+    api-base-url: string,
+    api-key: string,
+}
+
+export struct SettingBackup {
+   configuration: bool,
+   data: bool,
+   cache: bool,
+}
+
+//////////////////////////////// Logic Struct Start ////////////////////////////////
+import { TextListEntry } from "./base/def.slint";
+
+export enum ProgressType {
+    None,
+
+    ConvertToAduio,
+    ConvertToAduioFinished,
+
+    Transcribe,
+    TranscribeFinished,
+
+    AddSubtitle,
+    AddSubtitleFinished,
+
+    AdjustVoice,
+    AdjustVoiceFinished,
+
+    Translate,
+    TranslateFinished,
+
+    Correct,
+    CorrectFinished,
+
+    OptimizeTimestamp,
+    OptimizeTimestampFinished,
+
+    PartiallyFinished,
+}
+
+export enum MediaType {
+    Video,
+    Audio,
+    unknown,
+}
+
+export struct SubtitleEntry {
+    start-timestamp: string,
+    end-timestamp: string,
+
+    start-timestamp-cache: string,
+    end-timestamp-cache: string,
+
+    original-text: string,
+    correction-text: string,
+    translation-text: string,
+}
+
+export struct VideoPlayerSetting {
+    img: image,
+    img-width: int,
+    img-height: int,
+    current-time: float,
+    end-time: float,
+    is-playing: bool,
+    volume: float,
+}
+
+export struct SubtitleSetting {
+    font-name: string,
+    font-size: int,
+    is-white-font-color: bool,
+    enable-background: bool,
+}
+
+export struct TranscribeEntry {
+    id: string,
+    progress: float,
+    progress-type: ProgressType,
+
+    file-path: string,
+    is-file-exist: bool,
+    media-type: MediaType,
+
+    model_name: string,
+    lang: string,
+
+    sidebar-entry: TextListEntry,
+    subtitle-entries: [SubtitleEntry],
+
+    video-player-setting: VideoPlayerSetting,
+    subtitle-setting: SubtitleSetting,
+}
+
+export struct ExportVideoSetting {
+    id: string,
+    file-path: string,
+    is-embedded: bool,
+    is-adjust-volume: bool,
+    adjust-volume-times: float,
+    inner: SubtitleSetting,
+}
+
+export struct AiHandleSubtitleSetting {
+    ty: ProgressType,
+    prompt: string,
+    chunk-size: int,
+    lang: string,
+}
+
+export enum ModelSource {
+    Network,
+    Local,
+}
+
+export enum ModelStatus {
+    Downloading,
+    DownloadFailed,
+    DownloadFinished,
+    DownloadCancelled,
+    Import,
+    NoFound,
+    InvalidFormat,
+}
+
+export struct ModelEntry {
+    id: string,
+    name: string,
+    progress: float,
+    file-path: string,
+    file-size: string,
+    source: ModelSource,
+    status: ModelStatus,
+}
+
+//////////////////////////////// Logic Struct End  ////////////////////////////////
+
+export global Store {
+    in-out property <DeviceType> device-type: DeviceType.Desktop;
+    in-out property <bool> is-first-run;
+    in-out property <bool> is-show-landing-page;
+    in-out property <bool> is-show-help-btn;
+    in-out property <bool> is-show-remove-caches-btn: true;
+
+    // desktop
+    in-out property <TabIndex> previous-tab-index: TabIndex.Home;
+    in-out property <TabIndex> current-tab-index: TabIndex.Home;
+    in-out property <PopupIndex> current-popup-index: PopupIndex.None;
+    in-out property <SettingDetailIndex> current-setting-detail-index: SettingDetailIndex.Preference;
+
+    // android
+    in-out property <MobileTabIndex> previous-mobile-tab-index: MobileTabIndex.Home;
+    in-out property <MobileTabIndex> current-mobile-tab-index: MobileTabIndex.Home;
+    in-out property <MobileSettingDetailIndex> current-mobile-setting-detail-index: MobileSettingDetailIndex.Preference;
+
+    in-out property <SettingPreference> setting-preference: {
+        win-width: 500,
+        win-height: 800,
+        font-size: "16",
+        font-family: "Source Han Sans CN",
+        language: "en",
+        always-on-top: false,
+        no-frame: true,
+        is-dark: false,
+    };
+
+    //////////////////////////////// Logic Start ////////////////////////////////
+    in-out property <bool> is-cn: setting-preference.language == "cn";
+    in-out property <bool> update-transcribe-sidebar-flag;
+    in-out property <bool> update-video-player-flag;
+    in-out property <bool> update-audio-player-flag;
+    in-out property <bool> update-transcribe-flag;
+    in-out property <bool> update-subtitles-flag;
+    in-out property <bool> ffmpeg-is-installed;
+    in-out property <int> edit-transcribe-sidebar-index;
+    in-out property <int> selected-transcribe-sidebar-index;
+    in-out property <AiHandleSubtitleSetting> edit-ai-handle-subtitle-setting;
+    in-out property <[string]> system-fonts: [];
+    in-out property <[string]> whisper-langs: [];
+    in-out property <[TranscribeEntry]> transcribe-entries-cache: [];
+    in-out property <[TranscribeEntry]> transcribe-entries: [
+        {
+            id: "uuid-1",
+            progress: 0.3,
+            progress-type: ProgressType.Transcribe,
+            file-path: "/tmp/text.mp4",
+            is-file-exist: false,
+            media-type: MediaType.Video,
+            sidebar-entry: {
+                id: "uuid-1",
+                text: "hello world",
+            },
+            subtitle-entries: [
+                {
+                    start-timestamp: "00:00:00,000",
+                    end-timestamp: "00:00:03,123",
+                    original-text: "测试文本",
+                    correction-text: "测试文本 hello wo",
+                    translation-text: "test content",
+                },
+                {
+                    start-timestamp: "00:00:04,000",
+                    end-timestamp: "00:00:08,123",
+                    original-text: "测试文本2",
+                }
+            ],
+            video-player-setting: {
+                img: @image-url("./images/brand.png"),
+                img-width: 512,
+                img-height: 512,
+                current-time: 1.0,
+                end-time: 100.0,
+            },
+            subtitle-setting: {
+                font-name: "Source Han Serif CN",
+                font-size: 20,
+                is-embedded: true,
+                is-white-font-color: true,
+                enable-background: true,
+            },
+        },
+        {
+            id: "uuid-2",
+            progress: 0.3,
+            progress-type: ProgressType.Transcribe,
+            file-path: "/tmp/text2.mp4",
+            is-file-exist: true,
+            media-type: MediaType.Audio,
+            sidebar-entry: {
+                id: "uuid-2",
+                text: "hello world, hello world hello world",
+            },
+            subtitle-entries: [
+                {
+                    start-timestamp: "00:00:00,000",
+                    end-timestamp: "00:00:03,123",
+                    original-text: "测试文本",
+                    translation-text: "test content",
+                }
+            ],
+            video-player-setting: {
+                img: @image-url("./images/brand.png"),
+                current-time: 1.0,
+                end-time: 100.0,
+            },
+        },
+    ];
+
+    in-out property <[ModelEntry]> model-entries: [
+        {
+            name: "ggml-tiny.bin",
+            progress: 0.55,
+            file-path: "/tmp/ggml-tiny.bin",
+            file-size: "100M",
+            source: ModelSource.Network,
+            status: ModelStatus.DownloadFinished,
+        },
+        {
+            name: "ggml-base.bin",
+            progress: 0.3,
+            file-path: "/tmp/ggml-base.bin",
+            file-size: "150.2M",
+            source: ModelSource.Local,
+            status: ModelStatus.NoFound,
+        }
+    ];
+    //////////////////////////////// Logic End  ////////////////////////////////
+}

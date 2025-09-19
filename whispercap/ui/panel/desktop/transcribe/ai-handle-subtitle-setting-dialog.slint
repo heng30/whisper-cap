@@ -1,0 +1,78 @@
+import { Theme, Store, Logic, Util, Icons, PopupIndex } from "../../def.slint";
+import { Dialog, Select, LineInput, SettingDetailInnerVbox, SettingDetailLabel, TxtEdit } from "../../../base/widgets.slint";
+import { AiHandleSubtitleSetting, ProgressType } from "../../../store.slint";
+
+export component AiHandleSubtitleSettingDialog inherits Dialog {
+    private property <AiHandleSubtitleSetting> setting: Store.edit-ai-handle-subtitle-setting;
+
+    title: setting.ty == ProgressType.Translate ? Logic.tr("Ai Translate") : Logic.tr("Ai Correct");
+    is-prevent-event-forward: true;
+
+    confirmed => {
+        setting.prompt = txt-edit.text;
+
+        if (setting.ty == ProgressType.Translate) {
+            Logic.ai-translate-all-subtitles(setting);
+        } else if (setting.ty == ProgressType.Correct) {
+            Logic.ai-correct-all-subtitles(setting);
+        }
+    }
+
+    canceled => {
+        self.escape();
+    }
+
+    VerticalLayout {
+        alignment: start;
+        padding: Theme.padding * 2;
+        spacing: Theme.spacing * 4;
+
+        if setting.ty == ProgressType.Translate: SettingDetailInnerVbox {
+            SettingDetailLabel {
+                text: Logic.tr("Language");
+            }
+
+            lang-selected := Select {
+                values: Store.whisper-langs;
+                current-value: setting.lang;
+                selected => {
+                    setting.lang = self.current-value;
+                    txt-edit.text = "Translate the following sentence into" + " " + setting.lang + " " + "while preserving the original meaning. No need to output the original text.";
+                }
+            }
+        }
+
+        SettingDetailInnerVbox {
+            SettingDetailLabel {
+                text: Logic.tr("Batch size");
+            }
+
+            LineInput {
+                input-type: InputType.decimal;
+                text: setting.chunk-size;
+
+                edited => {
+                    setting.chunk-size = self.text.to_float();
+                }
+            }
+        }
+
+        SettingDetailInnerVbox {
+            SettingDetailLabel {
+                text: Logic.tr("Prompt");
+            }
+
+            txt-edit := TxtEdit {
+                height: self.font-size * 8;
+
+                init => {
+                    if (setting.ty == ProgressType.Correct) {
+                        self.text = "Please correct the misspelled words in the following statement. No need to output the original text."
+                    } else {
+                        self.text = "Translate the following sentence into" + " " + setting.lang + " " + "while preserving the original meaning. No need to output the original text.";
+                    }
+                }
+            }
+        }
+    }
+}

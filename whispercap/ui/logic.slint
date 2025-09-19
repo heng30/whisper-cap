@@ -1,0 +1,282 @@
+import { Store,  SettingPreference, SettingModel, TabIndex, SettingDetailIndex, MobileSettingDetailIndex, PopupIndex, MobileTabIndex, SettingBackup, ProgressType, TranscribeEntry, ExportVideoSetting, SubtitleSetting, AiHandleSubtitleSetting, SubtitleEntry, ModelSource, ModelStatus, ModelEntry } from "store.slint";
+import { Theme } from "theme.slint";
+import { PopupActionEntry } from "base/popup-action.slint";
+import { TextListEntry } from "base/def.slint";
+
+export global Logic {
+    callback caches-size() -> string;
+    callback remove-caches();
+
+    callback copy-to-clipboard(text: string);
+    callback paste-from-clipboard() -> string;
+
+    callback get-setting-preference() -> SettingPreference;
+    callback set-setting-preference(setting: SettingPreference);
+
+    callback increase-font-size();
+    callback decrease-font-size();
+
+    callback backup(setting: SettingBackup);
+    callback recover();
+    callback uninstall();
+
+    pure callback inner-tr(text: string, lang: string) -> string;
+    inner-tr(text, lang) => {
+        return text;
+    }
+
+    pure public function tr(text: string) -> string {
+        return inner-tr(text, Store.setting-preference.language);
+    }
+
+    // desktop
+    public function switch-tab(index: TabIndex) {
+        if (Store.current-tab-index != index) {
+            Store.previous-tab-index = Store.current-tab-index;
+            Store.current-tab-index = index;
+        }
+    }
+
+    //desktop
+    public function switch-popup(index: PopupIndex) {
+        if (Store.current-popup-index != index) {
+            Store.current-popup-index = index;
+        }
+    }
+
+    // desktop
+    public function switch-setting-detail(index: SettingDetailIndex) {
+        if (Store.current-setting-detail-index == index) {
+            return;
+        }
+        Store.current-setting-detail-index = index;
+    }
+
+    // android
+    public function switch-mobile-tab(index: MobileTabIndex) {
+        if (Store.current-mobile-tab-index != index) {
+            Store.previous-mobile-tab-index = Store.current-mobile-tab-index;
+            Store.current-mobile-tab-index = index;
+        }
+    }
+
+    // android
+    public function switch-mobile-setting-detail(index: MobileSettingDetailIndex) {
+        if (Store.current-mobile-setting-detail-index == index) {
+            return;
+        }
+        Store.current-mobile-setting-detail-index = index;
+    }
+
+    //////////////////////////////// Logic Start  ////////////////////////////////
+    callback get-setting-model() -> SettingModel;
+    callback set-setting-model(setting: SettingModel);
+
+    callback new-transcribe-entry();
+    callback rename-transcribe-entry(index: int, text: string);
+    callback remove-transcribe-entry(index: int);
+    callback show-rename-transcribe-dialog(index: int);
+    pure callback gen-transcribe-sidebar-entries(flag: bool, entries: [TranscribeEntry]) -> [TextListEntry];
+    callback search-sidebar(value: string);
+    callback switch-sidebar-entry(old_index: int, new_index: int);
+
+    callback start-transcribe(entry: TranscribeEntry);
+    callback update-progress_type(id: string, ty: ProgressType);
+    callback update-progress(id: string, progress: float);
+    callback cancel-progress(id: string, ty: ProgressType);
+    callback import-media-file();
+    callback export-subtitles(ty: string);
+    callback export-video(setting: ExportVideoSetting);
+
+    callback show-ai-handle-subtitle-setting-dialog(ty: string);
+    callback ai-correct-all-subtitles(setting: AiHandleSubtitleSetting);
+    callback accept-all-corrected-subtitles();
+    callback remove-all-corrected-subtitles();
+    callback ai-translate-all-subtitles(setting: AiHandleSubtitleSetting);
+    callback remove-all-translated-subtitles();
+    callback show-replace-subtitles-content-dialog();
+    callback replace-subtitles-content(old-text: string, new-text: string);
+    callback replace-subtitles-all-separator();
+    callback traditional-to-simple-chinese();
+    callback swap-all-original-and-translation();
+    callback remove-all-subtitles();
+    callback optimize-subtitles-timestamp();
+    callback recover-subtitles-timestamp();
+
+    callback insert-above-subtitle(index: int);
+    callback insert-below-subtitle(index: int);
+    callback remove-subtitle(index: int);
+    callback save-subtitle(index: int, subtitle: SubtitleEntry);
+    callback reject-subtitle-correction(index: int);
+    callback accept-subtitle-correction(index: int);
+    pure callback is-valid-subtitle-timestamp(timestamp: string) -> bool;
+
+    callback video-player-start(timestamp: float);
+    callback video-player-stop();
+    callback before-change-video-player-position();
+    callback change-video-player-position(timestamp: float);
+    callback change-video-player-sound(sound: float);
+    callback update-video-subtitle-setting(setting: SubtitleSetting);
+
+    callback audio-player-start(timestamp: float);
+    callback audio-player-stop(timestamp: float);
+    callback before-change-audio-player-position();
+    callback change-audio-player-position(timestamp: float);
+    callback change-audio-player-sound(sound: float);
+
+    callback media-is-finished() -> bool;
+
+    pure callback srt-timestamp-to-ms-second(timestamp: string) -> float;
+    pure callback ai-available() -> bool;
+
+    pure callback get-current-subtitle(subtitles: [SubtitleEntry], current-time: float, _flag: bool) -> [string];
+    get-current-subtitle => {
+        return [
+            "font-kit 跨平台字体加载库，支持渲染字符",
+            "To set up your Rust project to use the nightly toolchain for developmen"
+        ];
+    }
+
+    pure callback available-models() -> [string];
+    pure callback show-undownload-models() -> [PopupActionEntry];
+    pure callback model-statistics(entries: [ModelEntry]) -> [int];
+    callback download-model(model-name: string);
+    callback redownload-model(index: int);
+    callback import-model();
+    callback manual-download-model();
+    callback cancel-download-model(index: int);
+    callback remove-model(index: int);
+
+    public pure function progress-type-str(ty: ProgressType) -> string {
+        if (ty == ProgressType.Transcribe) {
+            return Logic.tr("transcribing");
+        } else if (ty == ProgressType.ConvertToAduio) {
+            return Logic.tr("converting to aduio");
+        } else if (ty == ProgressType.AddSubtitle) {
+            return Logic.tr("adding subtitle");
+        } else if (ty == ProgressType.AdjustVoice) {
+            return Logic.tr("adjusting volume");
+        } else if (ty == ProgressType.TranscribeFinished) {
+            return Logic.tr("finished transcription");
+        } else if (ty == ProgressType.ConvertToAduioFinished) {
+            return Logic.tr("finished converting to aduio");
+        } else if (ty == ProgressType.AddSubtitleFinished) {
+            return Logic.tr("finished adding subtitle");
+        } else if (ty == ProgressType.AdjustVoiceFinished) {
+            return Logic.tr("finished adjusting video voice");
+        } else if (ty == ProgressType.Translate) {
+            return Logic.tr("translating");
+        } else if (ty == ProgressType.TranslateFinished) {
+            return Logic.tr("finished translating");
+        } else if (ty == ProgressType.Correct) {
+            return Logic.tr("correcting");
+        } else if (ty == ProgressType.CorrectFinished) {
+            return Logic.tr("finished correcting");
+        } else if (ty == ProgressType.OptimizeTimestamp) {
+            return Logic.tr("optimizing timestamp");
+        } else if (ty == ProgressType.OptimizeTimestampFinished) {
+            return Logic.tr("finished optimizing timestamp");
+        } else if (ty == ProgressType.PartiallyFinished) {
+            return Logic.tr("partially finished");
+        } else {
+            return "";
+        }
+    }
+
+    public pure function model_source_str(source: ModelSource) -> string {
+        if (source == ModelSource.Network) {
+            return Logic.tr("Network");
+        } else if (source == ModelSource.Local) {
+            return Logic.tr("Local");
+        } else {
+            return "";
+        }
+    }
+
+    public pure function model-status-str(status: ModelStatus) -> string {
+        if (status == ModelStatus.Downloading) {
+            return Logic.tr("Downloading");
+        } else if (status == ModelStatus.DownloadFailed) {
+            return Logic.tr("Download Failed");
+        } else if (status == ModelStatus.DownloadFinished) {
+            return Logic.tr("Download Finished");
+        } else if (status == ModelStatus.DownloadCancelled) {
+            return Logic.tr("Download Cancelled");
+        } else if (status == ModelStatus.NoFound) {
+            return Logic.tr("No Found");
+        } else if (status == ModelStatus.Import) {
+            return Logic.tr("Import");
+        } else if (status == ModelStatus.InvalidFormat) {
+            return Logic.tr("Invalid Format");
+        } else {
+            return "";
+        }
+    }
+
+    public pure function model-source-color(source: ModelSource) -> color {
+        if (source == ModelSource.Network) {
+            return Theme.secondary-brand-color;
+        } else if (source == ModelSource.Local) {
+            return Theme.info-color;
+        } else {
+            return Theme.info-color;
+        }
+    }
+
+    public pure function model-status-color(status: ModelStatus) -> color {
+        if (status == ModelStatus.Downloading) {
+            return Theme.thirdly-brand-color;
+        } else if (status == ModelStatus.DownloadFailed) {
+            return Theme.warning-color;
+        } else if (status == ModelStatus.DownloadFinished) {
+            return Theme.success-color;
+        } else if (status == ModelStatus.DownloadCancelled) {
+            return Theme.info-color;
+        } else if (status == ModelStatus.NoFound) {
+            return Theme.warning-color;
+        } else if (status == ModelStatus.Import) {
+            return Theme.success-color;
+        } else if (status == ModelStatus.InvalidFormat) {
+            return Theme.danger-color;
+        } else {
+            return Theme.info-color;
+        }
+    }
+
+    public function toggle-update-transcribe-sidebar-flag() {
+        Store.update-transcribe-sidebar-flag = !Store.update-transcribe-sidebar-flag;
+    }
+
+    public function toggle-update-video-player-flag() {
+        Store.update-video-player-flag = !Store.update-video-player-flag;
+    }
+
+    public function toggle-update-audio-player-flag() {
+        Store.update-audio-player-flag = !Store.update-audio-player-flag;
+    }
+
+    public function toggle-update-transcribe-flag() {
+        Store.update-transcribe-flag = !Store.update-transcribe-flag;
+    }
+
+    public function toggle-update-subtitles-flag() {
+        Store.update-subtitles-flag = !Store.update-subtitles-flag;
+    }
+
+    public function default-audio-player-screenshot() -> image {
+        return @image-url("../ui/images/brand.png");
+    }
+
+    public function download-icon() -> image {
+        return @image-url("../ui/images/download.svg");
+    }
+
+    pure public function update-video-player-image(_flag: bool, img: image) -> image {
+        return img;
+    }
+
+    public function current-transcribe-entry() -> TranscribeEntry {
+        return Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+    }
+    //////////////////////////////// Logic End  ////////////////////////////////
+}

@@ -1,0 +1,92 @@
+import { Theme, Icons } from "../../../theme.slint";
+import { Util } from "../../../util.slint";
+import { Logic } from "../../../logic.slint";
+import { Store, TranscribeEntry, MediaType } from "../../../store.slint";
+import { FilePicker, AudioControl } from "../../../base/widgets.slint";
+import { Transcribe } from "transcribe.slint";
+import { VideoPlayer } from "video-player.slint";
+import { AudioPlayer } from "audio-player.slint";
+
+export component TranscribePanel inherits Rectangle {
+    private property <bool> is-progressing;
+    private property <bool> is-show-file-picker: current-transcribe-entry.id.is-empty && !is-progressing;
+
+    property <TranscribeEntry> current-transcribe-entry: update-current-transcribe-entry(Store.update-transcribe-flag);
+    private property <MediaType> media-type: current-transcribe-entry.media-type;
+
+    function update-current-transcribe-entry(flag: bool) -> TranscribeEntry {
+        return Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+    }
+
+    if is-show-file-picker: FilePicker {
+        icon: Icons.media;
+        title: Logic.tr("Support video and audio files");
+        sub-title: "e.g. mp4, mkv, mp3, wav...";
+
+        select-file => {
+            Logic.new-transcribe-entry();
+        }
+    }
+
+    if !is-show-file-picker: Rectangle {
+        if media-type == MediaType.Video: Rectangle {
+            lp := Transcribe {
+                x: 0;
+                width: root.width * 0.6;
+
+                changed is-progressing => {
+                    root.is-progressing = self.is-progressing;
+                }
+            }
+
+            mp := Rectangle {
+                x: lp.width;
+                width: Theme.padding;
+                border-radius: self.width / 2;
+                background: ta.has-hover ? Theme.checked-background : Colors.transparent;
+
+                ta := TouchArea {
+                    mouse-cursor: MouseCursor.col-resize;
+                    moved => {
+                        lp.width = Math.min(Math.max(0px, lp.width - (self.pressed-x - self.mouse-x)), root.width - self.width)
+                    }
+                }
+            }
+
+            VideoPlayer {
+                x: mp.x + mp.width;
+                width: root.width - root.padding * 2 - self.x;
+            }
+        }
+
+        if media-type == MediaType.Audio: Rectangle {
+            lp-audio := Transcribe {
+                y: 0;
+                height: root.height - root.padding * 2 - mp-audio.height - rp-audio.height;
+
+                changed is-progressing => {
+                    root.is-progressing = self.is-progressing;
+                }
+            }
+
+            mp-audio := Rectangle {
+                y: lp-audio.height;
+                height: Theme.padding;
+                border-radius: self.height / 2;
+                background: ta-audio.has-hover ? Theme.checked-background : Colors.transparent;
+
+                ta-audio := TouchArea {
+                    mouse-cursor: MouseCursor.col-resize;
+                    moved => {
+                        rp-audio.height = Math.min(Math.max(0px, rp-audio.height + (self.pressed-y - self.mouse-y)), root.height - self.height)
+                    }
+                }
+            }
+
+            rp-audio := AudioPlayer {
+                y: mp-audio.y + mp-audio.height;
+                height: self.preferred-height;
+            }
+        }
+    }
+}
