@@ -413,7 +413,17 @@ pub fn init(ui: &AppWindow) {
             video_player_stop(&ui, false);
         }
 
-        video_player_start(&ui, timestamp);
+        video_player_start(&ui, timestamp, None);
+    });
+
+    let ui_weak = ui.as_weak();
+    global_logic!(ui).on_video_player_partial_play(move |start_timestamp, end_timestamp| {
+        let ui = ui_weak.unwrap();
+        if video_player_is_playing() {
+            video_player_stop(&ui, false);
+        }
+
+        video_player_partial_play(&ui, start_timestamp, end_timestamp);
     });
 
     let ui_weak = ui.as_weak();
@@ -458,7 +468,12 @@ pub fn init(ui: &AppWindow) {
 
     let ui_weak = ui.as_weak();
     global_logic!(ui).on_audio_player_start(move |timestamp| {
-        audio_player_start(&ui_weak.unwrap(), timestamp);
+        audio_player_start(&ui_weak.unwrap(), timestamp, None);
+    });
+
+    let ui_weak = ui.as_weak();
+    global_logic!(ui).on_audio_player_partial_play(move |start_timestamp, end_timestamp| {
+        audio_player_partial_play(&ui_weak.unwrap(), start_timestamp, end_timestamp);
     });
 
     let ui_weak = ui.as_weak();
@@ -2268,7 +2283,7 @@ fn accept_subtitle_correction(ui: &AppWindow, index: usize) {
     update_db_entry(&ui, entry.into());
 }
 
-fn video_player_start(ui: &AppWindow, timestamp: f32) {
+fn video_player_start(ui: &AppWindow, timestamp: f32, duration: Option<f32>) {
     let entry = global_logic!(ui).invoke_current_transcribe_entry();
     let path = entry.file_path.to_string();
 
@@ -2301,6 +2316,12 @@ fn video_player_start(ui: &AppWindow, timestamp: f32) {
                 VideoResolution::Origin
             })
             .with_fps(metadata.fps.max(25.0));
+
+        let config = if let Some(duration) = duration {
+            config.with_duration_ms((duration * 1000.0) as u64)
+        } else {
+            config
+        };
 
         // FIXME: low efficiency
         match ffmpeg::video_frames_iter(
@@ -2361,6 +2382,7 @@ fn video_player_start(ui: &AppWindow, timestamp: f32) {
                 }
 
                 if matches!(status, VideoExitStatus::Finished) {
+                    stop_audio();
                     drop_audio_player_handle();
                 }
 
@@ -2371,6 +2393,15 @@ fn video_player_start(ui: &AppWindow, timestamp: f32) {
             }
         }
     });
+}
+
+fn video_player_partial_play(ui: &AppWindow, start_timestamp: f32, end_timestamp: f32) {
+    if start_timestamp >= end_timestamp {
+        return;
+    }
+
+    let duration = end_timestamp - start_timestamp;
+    video_player_start(ui, start_timestamp, Some(duration));
 }
 
 fn video_player_stop(ui: &AppWindow, update_ui: bool) {
@@ -2389,7 +2420,7 @@ fn video_player_stop(ui: &AppWindow, update_ui: bool) {
     }
 }
 
-fn audio_player_start(ui: &AppWindow, timestamp: f32) {
+fn audio_player_start(ui: &AppWindow, timestamp: f32, segment_duration: Option<f32>) {
     let index = global_store!(ui).get_selected_transcribe_sidebar_index() as usize;
     let mut entry = global_logic!(ui).invoke_current_transcribe_entry();
     let (_, audio_path, _) = get_convert_to_audio_paths(&entry);
@@ -2411,7 +2442,7 @@ fn audio_player_start(ui: &AppWindow, timestamp: f32) {
         return;
     };
 
-    update_audio_progress_background(ui.as_weak(), duration, audio_total_index);
+    update_audio_progress_background(ui.as_weak(), duration, audio_total_index, segment_duration);
 
     entry.video_player_setting.current_time = timestamp;
     entry.video_player_setting.end_time = duration;
@@ -2425,12 +2456,20 @@ fn update_audio_progress_background(
     ui_weak: Weak<AppWindow>,
     duration: f32,
     audio_total_index: u64,
+    segment_duration: Option<f32>,
 ) {
     let media_index = MEDIA_INC_NUM.load(Ordering::Relaxed);
 
     tokio::spawn(async move {
+        let ms_step = 20;
+        let mut segment_duration_ms = if let Some(segment_duration) = segment_duration {
+            Some((segment_duration * 1000.0) as i64)
+        } else {
+            None
+        };
+
         loop {
-            tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(ms_step)).await;
 
             if media_index != MEDIA_INC_NUM.load(Ordering::Relaxed) {
                 return;
@@ -2451,6 +2490,27 @@ fn update_audio_progress_background(
                 }
                 None => return,
             };
+
+            if handle.paused() {
+                segment_duration_ms = None;
+            } else {
+                if let Some(ms) = segment_duration_ms {
+                    if ms <= 0 {
+                        let ui_weak = ui_weak.clone();
+                        _ = slint::invoke_from_event_loop(move || {
+                            let ui = ui_weak.unwrap();
+                            let setting = global_logic!(ui)
+                                .invoke_current_transcribe_entry()
+                                .video_player_setting;
+                            global_logic!(ui).invoke_audio_player_stop(setting.current_time);
+                        });
+
+                        return;
+                    } else {
+                        segment_duration_ms = Some(ms - ms_step as i64);
+                    }
+                }
+            }
 
             if !handle.paused() {
                 async_update_audio_progress_background(
@@ -2504,6 +2564,14 @@ fn async_update_audio_progress_background(
     });
 }
 
+fn audio_player_partial_play(ui: &AppWindow, start_timestamp: f32, end_timestamp: f32) {
+    if start_timestamp >= end_timestamp {
+        return;
+    }
+
+    audio_player_start(ui, start_timestamp, Some(end_timestamp - start_timestamp));
+}
+
 fn audio_player_stop(ui: &AppWindow, timestamp: f32) {
     stop_audio();
     MEDIA_INC_NUM.fetch_add(1, Ordering::Relaxed);
@@ -2522,21 +2590,7 @@ fn before_change_audio_player_position(_ui: &AppWindow) {
 }
 
 fn change_audio_player_player_position(ui: &AppWindow, timestamp: f32) {
-    seek_audio(timestamp);
-
-    let index = global_store!(ui).get_selected_transcribe_sidebar_index() as usize;
-    let mut entry = global_logic!(ui).invoke_current_transcribe_entry();
-    entry.video_player_setting.current_time = timestamp;
-    entry.video_player_setting.is_playing = true;
-
-    if let Some(handle) = get_audio_player_handle()
-        && handle.paused()
-    {
-        handle.resume();
-    }
-
-    store_transcribe_entries!(ui).set_row_data(index, entry);
-    global_logic!(ui).invoke_toggle_update_audio_player_flag();
+    global_logic!(ui).invoke_audio_player_start(timestamp);
 }
 
 fn get_current_subtitle(

@@ -394,11 +394,13 @@ component BodyItem inherits Rectangle {
                             clicked => {
                                 if (Logic.current-transcribe-entry().media-type == MediaType.Video) {
 
-                                    Logic.video-player-start(
-                                        Logic.srt-timestamp-to-ms-second(entry.start-timestamp) / 1000.0);
+                                    Logic.video-player-partial-play(
+                                        Logic.srt-timestamp-to-ms-second(entry.start-timestamp) / 1000.0,
+                                        Logic.srt-timestamp-to-ms-second(entry.end-timestamp) / 1000.0);
                                 } else {
-                                    Logic.audio-player-start(
-                                        Logic.srt-timestamp-to-ms-second(entry.start-timestamp) / 1000.0);
+                                    Logic.audio-player-partial-play(
+                                        Logic.srt-timestamp-to-ms-second(entry.start-timestamp) / 1000.0,
+                                        Logic.srt-timestamp-to-ms-second(entry.end-timestamp) / 1000.0);
                                 }
                             }
                         }

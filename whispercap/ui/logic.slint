@@ -112,6 +112,7 @@ export global Logic {
     pure callback is-valid-subtitle-timestamp(timestamp: string) -> bool;
 
     callback video-player-start(timestamp: float);
+    callback video-player-partial-play(start-timestamp: float, end-timestamp: float);
     callback video-player-stop();
     callback before-change-video-player-position();
     callback change-video-player-position(timestamp: float);
@@ -119,6 +120,7 @@ export global Logic {
     callback update-video-subtitle-setting(setting: SubtitleSetting);
 
     callback audio-player-start(timestamp: float);
+    callback audio-player-partial-play(start-timestamp: float, end-timestamp: float);
     callback audio-player-stop(timestamp: float);
     callback before-change-audio-player-position();
     callback change-audio-player-position(timestamp: float);
