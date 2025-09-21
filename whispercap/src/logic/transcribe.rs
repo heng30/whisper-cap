@@ -13,8 +13,8 @@ use crate::{
         AiHandleSubtitleSetting as UIAiHandleSubtitleSetting, AppWindow,
         ExportVideoSetting as UIExportVideoSetting, MediaType as UIMediaType, PopupIndex,
         ProgressType, SubtitleEntry as UISubtitleEntry, SubtitleSetting as UISubtitleSetting,
-        TextListEntry as UITextListEntry, TranscribeEntry as UITranscribeEntry,
-        VideoPlayerSetting as UIVideoPlayerSetting,
+        SystemFontInfo as UISystemFontInfo, TextListEntry as UITextListEntry,
+        TranscribeEntry as UITranscribeEntry, VideoPlayerSetting as UIVideoPlayerSetting,
     },
     toast_info, toast_success, toast_warn,
 };
@@ -55,13 +55,13 @@ static MEDIA_INC_NUM: AtomicU64 = AtomicU64::new(0);
 static CACHE: Lazy<Mutex<Cache>> = Lazy::new(|| Mutex::new(Cache::default()));
 
 #[macro_export]
-macro_rules! store_system_fonts {
+macro_rules! store_system_font_infos {
     ($ui:expr) => {
         crate::global_store!($ui)
-            .get_system_fonts()
+            .get_system_font_infos()
             .as_any()
-            .downcast_ref::<VecModel<SharedString>>()
-            .expect("We know we set a VecModel<SharedString> earlier")
+            .downcast_ref::<VecModel<UISystemFontInfo>>()
+            .expect("We know we set a VecModel<SystemFontInfo> earlier")
     };
 }
 
@@ -534,13 +534,30 @@ pub fn init(ui: &AppWindow) {
         get_current_subtitle(subtitles, current_time)
     });
 
+    global_logic!(ui).on_system_font_names(move |infos, _flag| {
+        let names = infos
+            .iter()
+            .map(|item| item.name.clone())
+            .collect::<VecModel<SharedString>>();
+
+        ModelRc::new(names)
+    });
+
+    global_logic!(ui).on_system_font_family(move |name, infos, _flag| {
+        if let Some(item) = infos.iter().find(|item| item.name == name) {
+            item.family.clone()
+        } else {
+            Default::default()
+        }
+    });
+
     // END
 }
 
 fn inner_init(ui: &AppWindow) {
     set_whisper_langs(&ui);
 
-    store_system_fonts!(ui).set_vec(vec![]);
+    store_system_font_infos!(ui).set_vec(vec![]);
     store_transcribe_entries!(ui).set_vec(vec![]);
     global_store!(ui).set_selected_transcribe_sidebar_index(-1);
     global_store!(ui).set_ffmpeg_is_installed(ffmpeg::is_installed());
@@ -559,9 +576,7 @@ fn inner_init(ui: &AppWindow) {
             }
         };
 
-        _ = slint::invoke_from_event_loop(move || {
-            let ui = ui.unwrap();
-
+        _ = ui.clone().upgrade_in_event_loop(move |ui| {
             let entries = entries
                 .into_iter()
                 .rev()
@@ -577,18 +592,29 @@ fn inner_init(ui: &AppWindow) {
 
             store_transcribe_entries!(ui).set_vec(entries);
             global_logic!(ui).invoke_toggle_update_transcribe_sidebar_flag();
-
-            let (mut chinese_fonts, mut none_chinese_fonts) = font::system_fonts();
-            chinese_fonts.sort();
-            none_chinese_fonts.sort();
-            chinese_fonts.extend(none_chinese_fonts.into_iter());
-
-            let fonts = chinese_fonts
-                .into_iter()
-                .map(|item| item.into())
-                .collect::<Vec<SharedString>>();
-            store_system_fonts!(ui).set_vec(fonts);
         });
+
+        let (mut chinese_font_infos, mut none_chinese_font_infos) = font::system_fonts();
+        chinese_font_infos.sort_by(|a, b| a.0.cmp(&b.0));
+        none_chinese_font_infos.sort_by(|a, b| a.0.cmp(&b.0));
+        chinese_font_infos.extend(none_chinese_font_infos.into_iter());
+
+        let font_infos = chinese_font_infos
+            .into_iter()
+            .map(|item| UISystemFontInfo {
+                name: item.0.into(),
+                family: item.1.into(),
+            })
+            .collect::<Vec<UISystemFontInfo>>();
+
+        _ = ui.clone().upgrade_in_event_loop(move |ui| {
+            store_system_font_infos!(ui).set_vec(font_infos);
+        });
+
+        // let ui_weak = ui.clone();
+        // _ = slint::invoke_from_event_loop(move || {
+        //     store_system_font_infos!(ui_weak.unwrap()).set_vec(font_infos);
+        // })
     });
 }
 
@@ -640,7 +666,10 @@ fn new_transcribe_entry(ui: &AppWindow) {
             };
 
             entry.subtitle_setting = UISubtitleSetting {
-                font_name: store_system_fonts!(ui).row_data(0).unwrap_or_default(),
+                font_name: store_system_font_infos!(ui)
+                    .row_data(0)
+                    .unwrap_or_default()
+                    .name,
                 font_size: 20,
                 is_white_font_color: true,
                 enable_background: false,

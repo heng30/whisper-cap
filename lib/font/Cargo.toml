@@ -11,4 +11,4 @@ repository.workspace = true
 description.workspace = true
 
 [dependencies]
-font-loader.workspace = true
+font-kit.workspace = true

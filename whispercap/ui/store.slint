@@ -193,6 +193,11 @@ export struct ModelEntry {
     status: ModelStatus,
 }
 
+export struct SystemFontInfo {
+    name: string,
+    family: string,
+}
+
 //////////////////////////////// Logic Struct End  ////////////////////////////////
 
 export global Store {
@@ -235,7 +240,7 @@ export global Store {
     in-out property <int> edit-transcribe-sidebar-index;
     in-out property <int> selected-transcribe-sidebar-index;
     in-out property <AiHandleSubtitleSetting> edit-ai-handle-subtitle-setting;
-    in-out property <[string]> system-fonts: [];
+    in-out property <[SystemFontInfo]> system-font-infos: [];
     in-out property <[string]> whisper-langs: [];
     in-out property <[TranscribeEntry]> transcribe-entries-cache: [];
     in-out property <[TranscribeEntry]> transcribe-entries: [

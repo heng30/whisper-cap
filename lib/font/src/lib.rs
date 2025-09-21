@@ -1,24 +1,5 @@
-use font_loader::system_fonts;
+use font_kit::source::SystemSource;
 use std::collections::HashSet;
-
-pub fn system_fonts() -> (Vec<String>, Vec<String>) {
-    let sysfonts = system_fonts::query_all();
-    let mut chinese_fonts = HashSet::new();
-    let mut none_chinese_fonts = HashSet::new();
-
-    for font_name in &sysfonts {
-        if is_chinese_font(font_name) {
-            chinese_fonts.insert(font_name.clone());
-        } else {
-            none_chinese_fonts.insert(font_name.clone());
-        }
-    }
-
-    let chinese_fonts = Vec::from_iter(chinese_fonts.into_iter());
-    let none_chinese_fonts = Vec::from_iter(none_chinese_fonts.into_iter());
-
-    (chinese_fonts, none_chinese_fonts)
-}
 
 fn is_chinese_font(font_name: &str) -> bool {
     // 检查字体名称是否包含中文Unicode字符
@@ -60,37 +41,35 @@ fn is_chinese_font(font_name: &str) -> bool {
     false
 }
 
-// use font_kit::source::SystemSource;
-//
-// pub fn system_fonts() -> (Vec<(String, String)>, Vec<(String, String)>) {
-//     let source = SystemSource::new();
-//     let mut chinese_fonts = HashSet::new();
-//     let mut none_chinese_fonts = HashSet::new();
-//
-//     if let Ok(families) = source.all_families() {
-//         for family_name in families {
-//             if let Ok(family_handle) = source.select_family_by_name(&family_name) {
-//                 let fonts = family_handle.fonts();
-//                 for font_handle in fonts {
-//                     if let Ok(font) = font_handle.load() {
-//                         let font_name = font.full_name();
-//                         let family = font.family_name();
-//
-//                         let font_info = (font_name, family);
-//
-//                         if is_chinese_font(&font_info.0) {
-//                             chinese_fonts.insert(font_info);
-//                         } else {
-//                             none_chinese_fonts.insert(font_info);
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//
-//     let chinese_fonts = Vec::from_iter(chinese_fonts.into_iter());
-//     let none_chinese_fonts = Vec::from_iter(none_chinese_fonts.into_iter());
-//
-//     (chinese_fonts, none_chinese_fonts)
-// }
+pub fn system_fonts() -> (Vec<(String, String)>, Vec<(String, String)>) {
+    let source = SystemSource::new();
+    let mut chinese_fonts = HashSet::new();
+    let mut none_chinese_fonts = HashSet::new();
+
+    if let Ok(families) = source.all_families() {
+        for family_name in families {
+            if let Ok(family_handle) = source.select_family_by_name(&family_name) {
+                let fonts = family_handle.fonts();
+                for font_handle in fonts {
+                    if let Ok(font) = font_handle.load() {
+                        let font_name = font.full_name();
+                        let family = font.family_name();
+
+                        let font_info = (font_name, family);
+
+                        if is_chinese_font(&font_info.0) {
+                            chinese_fonts.insert(font_info);
+                        } else {
+                            none_chinese_fonts.insert(font_info);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let chinese_fonts = Vec::from_iter(chinese_fonts.into_iter());
+    let none_chinese_fonts = Vec::from_iter(none_chinese_fonts.into_iter());
+
+    (chinese_fonts, none_chinese_fonts)
+}

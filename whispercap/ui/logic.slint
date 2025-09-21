@@ -1,4 +1,4 @@
-import { Store,  SettingPreference, SettingModel, TabIndex, SettingDetailIndex, MobileSettingDetailIndex, PopupIndex, MobileTabIndex, SettingBackup, ProgressType, TranscribeEntry, ExportVideoSetting, SubtitleSetting, AiHandleSubtitleSetting, SubtitleEntry, ModelSource, ModelStatus, ModelEntry } from "store.slint";
+import { Store,  SettingPreference, SettingModel, TabIndex, SettingDetailIndex, MobileSettingDetailIndex, PopupIndex, MobileTabIndex, SettingBackup, ProgressType, TranscribeEntry, ExportVideoSetting, SubtitleSetting, AiHandleSubtitleSetting, SubtitleEntry, ModelSource, ModelStatus, ModelEntry, SystemFontInfo } from "store.slint";
 import { Theme } from "theme.slint";
 import { PopupActionEntry } from "base/popup-action.slint";
 import { TextListEntry } from "base/def.slint";
@@ -150,6 +150,9 @@ export global Logic {
     callback manual-download-model();
     callback cancel-download-model(index: int);
     callback remove-model(index: int);
+
+    pure callback system-font-names(infos: [SystemFontInfo], _flag: int) -> [string];
+    pure callback system-font-family(name: string, infos: [SystemFontInfo], _flag: int) -> string;
 
     public pure function progress-type-str(ty: ProgressType) -> string {
         if (ty == ProgressType.Transcribe) {
