@@ -2201,6 +2201,8 @@ fn split_subtitle(ui: &AppWindow, index: usize) {
         store_transcribe_subtitle_entries!(entry).insert(index + 1, next_subtitle);
     }
 
+    global_logic!(ui).invoke_toggle_update_subtitles_flag();
+
     update_db_entry(&ui, entry.into());
 }
 
@@ -2493,8 +2495,11 @@ fn video_player_start(ui: &AppWindow, timestamp: f32, duration: Option<f32>) {
                 }
 
                 if matches!(status, VideoExitStatus::Finished) {
-                    stop_audio();
-                    drop_audio_player_handle();
+                    if duration.is_none() {
+                        drop_audio_player_handle();
+                    } else {
+                        stop_audio();
+                    }
                 }
 
                 let ui = ui_weak.clone();
