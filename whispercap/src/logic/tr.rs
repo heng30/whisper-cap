@@ -333,6 +333,8 @@ fn cn() -> &'static HashMap<&'static str, &'static str> {
             ("partially finished", "部分完成"),
             ("recover timestamp", "恢复时间戳"),
             ("Please download or import models", "请下载或导入模型"),
+            ("Merge Above", "向上合并"),
+            ("Split", "分割"),
         ])
     })
 }

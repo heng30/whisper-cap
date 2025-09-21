@@ -420,6 +420,19 @@ component BodyItem inherits Rectangle {
                             clicked => {
                                 PopupActionSetting.show(self.absolute-position.x + self.width, self.absolute-position.y, [
                                     {
+                                        icon: Icons.split-down-light,
+                                        text: Logic.tr("Split"),
+                                        action: "split-subtitle",
+                                        user-data: index,
+                                    },
+                                    {
+                                        icon: Icons.merge-above-light,
+                                        text: Logic.tr("Merge Above"),
+                                        action: "merge-above-subtitle",
+                                        user-data: index,
+                                    },
+                                    { },
+                                    {
                                         icon: Icons.cell-insert-above,
                                         text: Logic.tr("Insert Above"),
                                         action: "insert-above-subtitle",

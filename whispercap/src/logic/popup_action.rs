@@ -79,7 +79,16 @@ pub fn init(ui: &AppWindow) {
                 "recover-subtitles-timestamp" => {
                     global_logic!(ui).invoke_recover_subtitles_timestamp();
                 }
+
                 // ============= subtitle entry ================ //
+                "split-subtitle" => {
+                    let index = user_data.parse::<i32>().unwrap_or_default();
+                    global_logic!(ui).invoke_split_subtitle(index);
+                }
+                "merge-above-subtitle" => {
+                    let index = user_data.parse::<i32>().unwrap_or_default();
+                    global_logic!(ui).invoke_merge_above_subtitle(index);
+                }
                 "insert-above-subtitle" => {
                     let index = user_data.parse::<i32>().unwrap_or_default();
                     global_logic!(ui).invoke_insert_above_subtitle(index);

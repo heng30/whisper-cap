@@ -103,6 +103,8 @@ export global Logic {
     callback optimize-subtitles-timestamp();
     callback recover-subtitles-timestamp();
 
+    callback split-subtitle(index: int);
+    callback merge-above-subtitle(index: int);
     callback insert-above-subtitle(index: int);
     callback insert-below-subtitle(index: int);
     callback remove-subtitle(index: int);

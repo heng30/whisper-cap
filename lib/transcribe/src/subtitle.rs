@@ -2,6 +2,7 @@ use super::whisper::{TranscriptionResult, TranscriptionSegment};
 use anyhow::{Context, Result};
 use chrono::{NaiveTime, Timelike};
 use std::{fs, path::Path};
+use unicode_segmentation::UnicodeSegmentation;
 use whisper_rs::SegmentCallbackData;
 
 #[derive(Debug, Clone, Default)]
@@ -142,4 +143,130 @@ pub fn save_as_txt(subtitle: &[Subtitle], path: impl AsRef<Path>) -> Result<()> 
 
 pub fn convert_traditional_to_simplified_chinese(text: &str) -> String {
     fast2s::convert(text)
+}
+
+pub fn split_subtitle_into_two(
+    start_timestamp: u64,
+    end_timestamp: u64,
+    content: &str,
+) -> Option<((u64, u64, String), (u64, u64, String))> {
+    if content.is_empty() || content.trim().len() <= 1 {
+        return None;
+    }
+
+    let delimiters = [' ', ',', '.', '，', '。'];
+    let mut split_positions: Vec<usize> = Vec::new();
+
+    for (i, c) in content.char_indices() {
+        if delimiters.contains(&c) {
+            let next_pos = i + c.len_utf8();
+            if next_pos <= content.len() {
+                split_positions.push(next_pos);
+            }
+        }
+    }
+
+    let (first_part, second_part) = if split_positions.is_empty() {
+        let graphemes: Vec<&str> = content.graphemes(true).collect();
+        let mid = graphemes.len() / 2;
+        let first_part = graphemes[..mid].concat();
+        let second_part = graphemes[mid..].concat();
+        (first_part, second_part)
+    } else {
+        let target_split = content.len() / 2;
+        let Some(best_split) = split_positions
+            .iter()
+            .min_by_key(|&&pos| (pos as isize - target_split as isize).abs())
+        else {
+            return None;
+        };
+
+        let first_part = content[..*best_split].trim().to_string();
+        let second_part = content[*best_split..].trim().to_string();
+        (first_part, second_part)
+    };
+
+    let total_chars = content.chars().count();
+    let first_part_chars = first_part.chars().count();
+
+    let duration = end_timestamp - start_timestamp;
+    let split_time = start_timestamp + (duration * first_part_chars as u64) / total_chars as u64;
+
+    Some((
+        (start_timestamp, split_time, first_part),
+        (split_time, end_timestamp, second_part),
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_basic_split_with_timestamps() {
+        let ((start1, end1, part1), (start2, end2, part2)) =
+            split_subtitle_into_two(0, 1000, "Hello, world!").unwrap();
+
+        assert_eq!(part1, "Hello,");
+        assert_eq!(part2, "world!");
+        assert_eq!(start1, 0);
+        assert_eq!(end1, start2);
+        assert_eq!(end2, 1000);
+        assert!(end1 > 0 && end1 < 1000);
+    }
+
+    #[test]
+    fn test_chinese_split_with_timestamps() {
+        let ((start1, end1, part1), (start2, end2, part2)) =
+            split_subtitle_into_two(0, 1000, "你好，世界！").unwrap();
+
+        assert_eq!(part1, "你好，");
+        assert_eq!(part2, "世界！");
+        assert_eq!(start1, 0);
+        assert_eq!(end1, start2);
+        assert_eq!(end2, 1000);
+    }
+
+    #[test]
+    fn test_no_delimiters_with_timestamps() {
+        let ((start1, end1, part1), (_start2, end2, part2)) =
+            split_subtitle_into_two(0, 1000, "abcdefgh").unwrap();
+
+        assert_eq!(part1, "abcd");
+        assert_eq!(part2, "efgh");
+        assert_eq!(start1, 0);
+        assert_eq!(end1, 500);
+        assert_eq!(end2, 1000);
+    }
+
+    #[test]
+    fn test_empty_string() {
+        assert!(split_subtitle_into_two(0, 1000, "").is_none());
+    }
+
+    #[test]
+    fn test_single_character() {
+        assert!(split_subtitle_into_two(0, 1000, "a").is_none());
+    }
+
+    #[test]
+    fn test_time_calculation_proportion() {
+        let ((_start1, end1, _part1), (start2, _end2, _part2)) =
+            split_subtitle_into_two(0, 1000, "Hello world").unwrap();
+
+        let total_chars = 11;
+        let expected_split_time = (1000 * 5) / total_chars;
+
+        assert_eq!(end1, expected_split_time);
+        assert_eq!(start2, expected_split_time);
+    }
+
+    // cargo test test_complicate -- --no-capture
+    #[test]
+    fn test_complicate() {
+        let s = "就來看下這個庫,的手用情況 就顯得是要支數是278次.給帶了兩個版本";
+        let items = split_subtitle_into_two(0, 100, s).unwrap();
+
+        println!("{items:?}");
+    }
 }

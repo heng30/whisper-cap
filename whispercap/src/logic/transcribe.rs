@@ -374,6 +374,16 @@ pub fn init(ui: &AppWindow) {
     });
 
     let ui_weak = ui.as_weak();
+    global_logic!(ui).on_split_subtitle(move |index| {
+        split_subtitle(&ui_weak.unwrap(), index as usize);
+    });
+
+    let ui_weak = ui.as_weak();
+    global_logic!(ui).on_merge_above_subtitle(move |index| {
+        merge_above_subtitle(&ui_weak.unwrap(), index as usize);
+    });
+
+    let ui_weak = ui.as_weak();
     global_logic!(ui).on_insert_above_subtitle(move |index| {
         insert_above_subtitle(&ui_weak.unwrap(), index as usize);
     });
@@ -2136,6 +2146,107 @@ fn recover_subtitles_timestamp(ui: &AppWindow) {
         .collect::<Vec<UISubtitleEntry>>();
 
     store_transcribe_subtitle_entries!(entry).set_vec(subtitles);
+    update_db_entry(&ui, entry.into());
+}
+
+fn split_subtitle(ui: &AppWindow, index: usize) {
+    let entry = global_logic!(ui).invoke_current_transcribe_entry();
+    let subtitles_len = store_transcribe_subtitle_entries!(entry).row_count();
+    let subtitle = store_transcribe_subtitle_entries!(entry)
+        .row_data(index)
+        .unwrap();
+
+    let start_timestamp_ms = transcribe::subtitle::srt_timestamp_to_ms(&subtitle.start_timestamp);
+    let end_timestamp_ms = transcribe::subtitle::srt_timestamp_to_ms(&subtitle.end_timestamp);
+    if start_timestamp_ms.is_err() || end_timestamp_ms.is_err() {
+        toast_warn!(
+            ui,
+            format!(
+                "{}. {} -> {}",
+                tr("invalid timestamp"),
+                subtitle.start_timestamp,
+                subtitle.end_timestamp
+            )
+        );
+        return;
+    }
+
+    let Some((first_part, second_part)) = transcribe::subtitle::split_subtitle_into_two(
+        start_timestamp_ms.unwrap(),
+        end_timestamp_ms.unwrap(),
+        &subtitle.original_text,
+    ) else {
+        toast_warn!(ui, tr("split subtitle failed"));
+        return;
+    };
+
+    let current_subtitle = UISubtitleEntry {
+        start_timestamp: transcribe::subtitle::ms_to_srt_timestamp(first_part.0).into(),
+        end_timestamp: transcribe::subtitle::ms_to_srt_timestamp(first_part.1).into(),
+        original_text: first_part.2.into(),
+        ..Default::default()
+    };
+
+    let next_subtitle = UISubtitleEntry {
+        start_timestamp: transcribe::subtitle::ms_to_srt_timestamp(second_part.0).into(),
+        end_timestamp: transcribe::subtitle::ms_to_srt_timestamp(second_part.1).into(),
+        original_text: second_part.2.into(),
+        ..Default::default()
+    };
+
+    store_transcribe_subtitle_entries!(entry).set_row_data(index, current_subtitle);
+    if index == subtitles_len - 1 {
+        store_transcribe_subtitle_entries!(entry).push(next_subtitle);
+    } else {
+        store_transcribe_subtitle_entries!(entry).insert(index + 1, next_subtitle);
+    }
+
+    update_db_entry(&ui, entry.into());
+}
+
+fn merge_above_subtitle(ui: &AppWindow, index: usize) {
+    let entry = global_logic!(ui).invoke_current_transcribe_entry();
+    let subtitles_len = store_transcribe_subtitle_entries!(entry).row_count();
+
+    if subtitles_len < 2 || index == 0 {
+        return;
+    }
+
+    let mut prev_subtitle = store_transcribe_subtitle_entries!(entry)
+        .row_data(index - 1)
+        .unwrap();
+
+    let current_subtitle = store_transcribe_subtitle_entries!(entry)
+        .row_data(index)
+        .unwrap();
+
+    prev_subtitle.end_timestamp = current_subtitle.end_timestamp.clone();
+    prev_subtitle.end_timestamp_cache = current_subtitle.end_timestamp.clone();
+
+    if !prev_subtitle.original_text.is_empty() {
+        prev_subtitle.original_text.push_str(" ");
+    }
+    prev_subtitle
+        .original_text
+        .push_str(&current_subtitle.original_text);
+
+    if !prev_subtitle.correction_text.is_empty() {
+        prev_subtitle.correction_text.push_str(" ");
+    }
+    prev_subtitle
+        .correction_text
+        .push_str(&current_subtitle.correction_text);
+
+    if !prev_subtitle.translation_text.is_empty() {
+        prev_subtitle.translation_text.push_str(" ");
+    }
+    prev_subtitle
+        .translation_text
+        .push_str(&current_subtitle.translation_text);
+
+    store_transcribe_subtitle_entries!(entry).set_row_data(index - 1, prev_subtitle);
+    store_transcribe_subtitle_entries!(entry).remove(index);
+
     update_db_entry(&ui, entry.into());
 }
 
