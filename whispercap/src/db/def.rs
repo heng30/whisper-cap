@@ -138,13 +138,13 @@ impl From<TranscribeEntry> for UITranscribeEntry {
             media_type: entry.media_type.into(),
             lang: entry.lang.into(),
             sidebar_entry: entry.sidebar_entry.into(),
-            subtitle_entries: ModelRc::new(VecModel::from_slice(
-                &entry
+            subtitle_entries: ModelRc::new(
+                entry
                     .subtitle_entries
                     .into_iter()
                     .map(|item| item.into())
-                    .collect::<Vec<UISubtitleEntry>>(),
-            )),
+                    .collect::<VecModel<_>>(),
+            ),
             subtitle_setting: entry.subtitle_setting.into(),
             ..Default::default()
         }

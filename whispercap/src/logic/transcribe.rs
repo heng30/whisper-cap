@@ -269,6 +269,12 @@ pub fn init(ui: &AppWindow) {
     });
 
     let ui_weak = ui.as_weak();
+    global_logic!(ui).on_refresh_subtitles(move || {
+        let ui = ui_weak.unwrap();
+        refresh_subtitles(&ui);
+    });
+
+    let ui_weak = ui.as_weak();
     global_logic!(ui).on_show_ai_handle_subtitle_setting_dialog(move |ty| {
         let ui = ui_weak.unwrap();
         let mut setting = global_store!(ui).get_edit_ai_handle_subtitle_setting();
@@ -610,11 +616,6 @@ fn inner_init(ui: &AppWindow) {
         _ = ui.clone().upgrade_in_event_loop(move |ui| {
             store_system_font_infos!(ui).set_vec(font_infos);
         });
-
-        // let ui_weak = ui.clone();
-        // _ = slint::invoke_from_event_loop(move || {
-        //     store_system_font_infos!(ui_weak.unwrap()).set_vec(font_infos);
-        // })
     });
 }
 
@@ -648,6 +649,7 @@ fn new_transcribe_entry(ui: &AppWindow) {
         let screenshot_path = video_screenshot(&id, &media_file, media_type.clone());
         let media_duration = media_duration(&media_file, media_type.clone());
 
+        // TODO:
         _ = slint::invoke_from_event_loop(move || {
             let ui = ui.unwrap();
             let mut entry = UITranscribeEntry::default();
@@ -660,7 +662,7 @@ fn new_transcribe_entry(ui: &AppWindow) {
             entry.video_player_setting.volume = 1.0;
 
             entry.sidebar_entry = UITextListEntry {
-                id: id.into(),
+                id: id.clone().into(),
                 text: file_name.into(),
                 ..Default::default()
             };
@@ -687,7 +689,23 @@ fn new_transcribe_entry(ui: &AppWindow) {
             global_store!(ui).set_selected_transcribe_sidebar_index(0);
             toast_success!(ui, &tr("Add entry successfully"));
 
-            add_db_entry(&ui, entry.into());
+            add_db_entry(&ui, entry.clone().into());
+
+            // convert to whisper compatiable audio
+            if let Some((_, input_media_path, output_audio_path, output_audio_path_tmp)) =
+                velify_transcribe_files(&ui, &entry)
+            {
+                let (ui_weak, id) = (ui.as_weak(), entry.id.clone().to_string());
+                tokio::spawn(async move {
+                    convert_to_whisper_compatible_audio(
+                        ui_weak,
+                        id,
+                        &input_media_path,
+                        &output_audio_path,
+                        &output_audio_path_tmp,
+                    );
+                });
+            }
         });
     });
 }
@@ -1487,6 +1505,16 @@ fn export_video(ui: &AppWindow, setting: UIExportVideoSetting) {
     });
 }
 
+fn refresh_subtitles(ui: &AppWindow) {
+    let entry = global_logic!(ui).invoke_current_transcribe_entry();
+    let subtitles = store_transcribe_subtitle_entries!(entry)
+        .iter()
+        .collect::<Vec<UISubtitleEntry>>();
+
+    store_transcribe_subtitle_entries!(entry).set_vec(subtitles);
+    toast_success!(ui, tr("Refresh successfully"));
+}
+
 fn adjust_normalized_voice(
     ui_weak: Weak<AppWindow>,
     setting: &UIExportVideoSetting,
@@ -2277,6 +2305,7 @@ fn merge_above_subtitle(ui: &AppWindow, index: usize) {
 
     store_transcribe_subtitle_entries!(entry).set_row_data(index - 1, prev_subtitle);
     store_transcribe_subtitle_entries!(entry).remove(index);
+    global_logic!(ui).invoke_toggle_update_subtitles_flag();
 
     update_db_entry(&ui, entry.into());
 }
@@ -2403,6 +2432,7 @@ fn reject_subtitle_correction(ui: &AppWindow, index: usize) {
         .unwrap();
     subtitle.correction_text = Default::default();
     store_transcribe_subtitle_entries!(entry).set_row_data(index, subtitle);
+    global_logic!(ui).invoke_toggle_update_subtitles_flag();
 }
 
 fn accept_subtitle_correction(ui: &AppWindow, index: usize) {
@@ -2452,12 +2482,12 @@ fn video_player_start(ui: &AppWindow, timestamp: f32, duration: Option<f32>) {
         let media_num = MEDIA_INC_NUM.load(Ordering::Relaxed);
         let config = VideoFramesIterConfig::default()
             .with_offset_ms((timestamp * 1000.0) as u64)
-            .with_resolution(if metadata.height > 720 {
-                VideoResolution::P720
+            .with_resolution(if metadata.height > 480 {
+                VideoResolution::P480
             } else {
                 VideoResolution::Origin
             })
-            .with_fps(metadata.fps.max(25.0));
+            .with_fps(metadata.fps);
 
         let config = if let Some(duration) = duration {
             config.with_duration_ms((duration * 1000.0) as u64)

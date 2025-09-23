@@ -197,6 +197,18 @@ component HeadBar inherits HorizontalLayout {
                         }
                     }
 
+                    if current-transcribe-entry.subtitle-entries.length > 0: IconBtn {
+                        is-show-tip: true;
+                        tip: Logic.tr("refresh");
+                        icon: Icons.refresh;
+                        tip-position: Bottom;
+                        hover-color: Store.setting-preference.is-dark ? Theme.secondary-background.darker(50%) : Theme.secondary-background.darker(5%);
+
+                        clicked => {
+                            Logic.refresh-subtitles();
+                        }
+                    }
+
                     if !current-transcribe-entry.is-file-exist: IconBtn {
                         is-show-tip: true;
                         tip: Logic.tr("import");
@@ -258,7 +270,6 @@ component BodyItem inherits Rectangle {
     private property <bool> is-unsaved;
     private property <bool> is-edit;
     private property <SubtitleEntry> entry-cache;
-    private property update-flag <=> Store.update-subtitles-flag;
 
     callback clicked <=> ta.clicked;
 
@@ -276,7 +287,7 @@ component BodyItem inherits Rectangle {
     background: Theme.secondary-background;
     border-color: ta.has-hover ? Theme.thirdly-brand-color : Theme.base-border-color.brighter(Theme.is-dark ? 50% : 0%);
 
-    changed update-flag => {
+    changed entry => {
         entry-cache = entry;
     }
 
@@ -521,10 +532,16 @@ component BodyItem inherits Rectangle {
 
                         cancelled => {
                             Logic.reject-subtitle-correction(index);
+
+                            // FIXME:
+                            //  Already cleaned `correction-text` in abvoe function.
+                            //  However, the `entry` is not updated. So I clean it again.
+                            entry.correction-text = "";
                         }
 
                         confirmed => {
                             Logic.accept-subtitle-correction(index);
+                            entry.correction-text = "";
                         }
                     }
                 }
@@ -571,7 +588,11 @@ component BodyItem inherits Rectangle {
 component Body inherits ScrollView {
     in-out property <bool> is-progressing;
 
-    private property <TranscribeEntry> current-transcribe-entry: Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+    property <TranscribeEntry> current-transcribe-entry: update-current-transcribe-entry(Store.update-transcribe-flag);
+
+    function update-current-transcribe-entry(flag: bool) -> TranscribeEntry {
+        return Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
+    }
 
     VerticalLayout {
         spacing: Theme.spacing * 2;

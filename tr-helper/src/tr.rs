@@ -333,6 +333,9 @@ fn cn() -> &'static HashMap<&'static str, &'static str> {
             ("Please download or import models", "请下载或导入模型"),
             ("Merge Above", "向上合并"),
             ("Split", "分割"),
+            ("Refresh successfully", "刷新成功"),
+            ("refresh", "刷新"),
+            ("split subtitle failed", "分割字幕失败"),
         ])
     })
 }
