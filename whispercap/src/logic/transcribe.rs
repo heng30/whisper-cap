@@ -692,20 +692,19 @@ fn new_transcribe_entry(ui: &AppWindow) {
             add_db_entry(&ui, entry.clone().into());
 
             // convert to whisper compatiable audio
-            if let Some((_, input_media_path, output_audio_path, output_audio_path_tmp)) =
-                velify_transcribe_files(&ui, &entry)
-            {
-                let (ui_weak, id) = (ui.as_weak(), entry.id.clone().to_string());
-                tokio::spawn(async move {
-                    convert_to_whisper_compatible_audio(
-                        ui_weak,
-                        id,
-                        &input_media_path,
-                        &output_audio_path,
-                        &output_audio_path_tmp,
-                    );
-                });
-            }
+            let (ui_weak, id) = (ui.as_weak(), entry.id.clone().to_string());
+            let (input_media_path, output_audio_path, output_audio_path_tmp) =
+                get_convert_to_audio_paths(&entry);
+
+            tokio::spawn(async move {
+                convert_to_whisper_compatible_audio(
+                    ui_weak,
+                    id,
+                    &input_media_path,
+                    &output_audio_path,
+                    &output_audio_path_tmp,
+                );
+            });
         });
     });
 }
@@ -1916,7 +1915,6 @@ fn accept_all_corrected_subtitles(ui: &AppWindow) {
         .collect::<Vec<UISubtitleEntry>>();
 
     store_transcribe_subtitle_entries!(entry).set_vec(subtitles);
-    global_logic!(ui).invoke_toggle_update_subtitles_flag();
     toast_success!(ui, tr("accept all subtitles successfully"));
 
     update_db_entry(&ui, entry.into());
@@ -2258,8 +2256,6 @@ fn split_subtitle(ui: &AppWindow, index: usize) {
         store_transcribe_subtitle_entries!(entry).insert(index + 1, next_subtitle);
     }
 
-    global_logic!(ui).invoke_toggle_update_subtitles_flag();
-
     update_db_entry(&ui, entry.into());
 }
 
@@ -2305,7 +2301,6 @@ fn merge_above_subtitle(ui: &AppWindow, index: usize) {
 
     store_transcribe_subtitle_entries!(entry).set_row_data(index - 1, prev_subtitle);
     store_transcribe_subtitle_entries!(entry).remove(index);
-    global_logic!(ui).invoke_toggle_update_subtitles_flag();
 
     update_db_entry(&ui, entry.into());
 }
@@ -2413,7 +2408,6 @@ fn save_subtitle(ui: &AppWindow, index: usize, subtitle: UISubtitleEntry) {
     }
 
     store_transcribe_subtitle_entries!(entry).set_row_data(index, subtitle);
-    global_logic!(ui).invoke_toggle_update_subtitles_flag();
     toast_success!(ui, tr("save subtitle successfully"));
 
     update_db_entry(&ui, entry.into());
@@ -2432,7 +2426,6 @@ fn reject_subtitle_correction(ui: &AppWindow, index: usize) {
         .unwrap();
     subtitle.correction_text = Default::default();
     store_transcribe_subtitle_entries!(entry).set_row_data(index, subtitle);
-    global_logic!(ui).invoke_toggle_update_subtitles_flag();
 }
 
 fn accept_subtitle_correction(ui: &AppWindow, index: usize) {
@@ -2450,7 +2443,6 @@ fn accept_subtitle_correction(ui: &AppWindow, index: usize) {
     subtitle.original_text = subtitle.correction_text.clone();
     subtitle.correction_text = Default::default();
     store_transcribe_subtitle_entries!(entry).set_row_data(index, subtitle);
-    global_logic!(ui).invoke_toggle_update_subtitles_flag();
 
     update_db_entry(&ui, entry.into());
 }

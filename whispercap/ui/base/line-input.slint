@@ -142,6 +142,7 @@ export component ClickAndEditLabel inherits Rectangle {
     in-out property <bool> is-edit;
     in-out property <bool> use-fixed-width;
     in-out property <string> text;
+    in-out property <bool> is-edit-beaking-text-binding: true;
     in-out property <int> font-weight: Theme.normal-font-weight;
     in-out property <length> font-size: Theme.default-font-size;
     in-out property <color> text-color: Theme.regular-text-color;
@@ -224,7 +225,9 @@ export component ClickAndEditLabel inherits Rectangle {
             }
 
             edited => {
-                root.text = self.text;
+                if (is-edit-beaking-text-binding) {
+                    root.text = self.text;
+                }
                 root.edited(self.text);
             }
 

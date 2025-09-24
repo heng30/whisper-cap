@@ -267,10 +267,6 @@ export global Logic {
         Store.update-transcribe-flag = !Store.update-transcribe-flag;
     }
 
-    public function toggle-update-subtitles-flag() {
-        Store.update-subtitles-flag = !Store.update-subtitles-flag;
-    }
-
     public function default-audio-player-screenshot() -> image {
         return @image-url("../ui/images/brand.png");
     }

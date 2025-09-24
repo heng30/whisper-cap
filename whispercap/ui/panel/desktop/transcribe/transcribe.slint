@@ -269,9 +269,13 @@ component BodyItem inherits Rectangle {
 
     private property <bool> is-unsaved;
     private property <bool> is-edit;
-    private property <SubtitleEntry> entry-cache;
+    private property <SubtitleEntry> entry-cache: entry;
 
     callback clicked <=> ta.clicked;
+
+    changed entry => {
+        entry-cache = entry;
+    }
 
     function update-unsaved-status() {
         if (entry.start-timestamp == entry-cache.start-timestamp && entry.end-timestamp == entry-cache.end-timestamp && entry.original-text == entry-cache.original-text && entry.translation-text == entry-cache.translation-text) {
@@ -286,14 +290,6 @@ component BodyItem inherits Rectangle {
     border-width: Theme.default-border-width;
     background: Theme.secondary-background;
     border-color: ta.has-hover ? Theme.thirdly-brand-color : Theme.base-border-color.brighter(Theme.is-dark ? 50% : 0%);
-
-    changed entry => {
-        entry-cache = entry;
-    }
-
-    init => {
-        entry-cache = entry;
-    }
 
     ta := GainFocus {
         clicked => {
@@ -327,12 +323,13 @@ component BodyItem inherits Rectangle {
                     start-timestamp-input := ClickAndEditLabel {
                         private property <bool> is-valid-timestamp: Logic.is-valid-subtitle-timestamp(self.text);
 
-                        text: entry.start-timestamp;
+                        text: entry-cache.start-timestamp;
                         is-edit: root.is-edit;
                         text-color: is-valid-timestamp ? Theme.regular-text-color : Theme.warning-color;
+                        is-edit-beaking-text-binding: false;
 
                         edited(text) => {
-                            entry.start-timestamp = text;
+                            entry-cache.start-timestamp = text;
                             update-unsaved-status();
                         }
 
@@ -354,12 +351,13 @@ component BodyItem inherits Rectangle {
 
                     end-timestamp-input := ClickAndEditLabel {
                         private property <bool> is-valid-timestamp: Logic.is-valid-subtitle-timestamp(self.text);
-                        text: entry.end-timestamp;
+                        text: entry-cache.end-timestamp;
                         is-edit: root.is-edit;
                         text-color: is-valid-timestamp ? Theme.regular-text-color : Theme.warning-color;
+                        is-edit-beaking-text-binding: false;
 
                         edited(text) => {
-                            entry.end-timestamp = text;
+                            entry-cache.end-timestamp = text;
                             update-unsaved-status();
                         }
 
@@ -379,13 +377,9 @@ component BodyItem inherits Rectangle {
                             is-show-tip: false;
 
                             cancelled => {
-                                entry.original-text = entry-cache.original-text;
-                                entry.start-timestamp = entry-cache.start-timestamp;
-                                entry.end-timestamp = entry-cache.end-timestamp;
-
-                                orginal-input.text = entry.original-text;
-                                start-timestamp-input.text = entry.start-timestamp;
-                                end-timestamp-input.text = entry.end-timestamp;
+                                entry-cache.original-text = entry.original-text;
+                                entry-cache.start-timestamp = entry.start-timestamp;
+                                entry-cache.end-timestamp = entry.end-timestamp;
 
                                 update-unsaved-status();
                             }
@@ -393,7 +387,7 @@ component BodyItem inherits Rectangle {
                             confirmed => {
                                 is-unsaved = false;
                                 root.is-edit = false;
-                                Logic.save-subtitle(index, entry);
+                                Logic.save-subtitle(index, entry-cache);
                             }
                         }
 
@@ -475,18 +469,25 @@ component BodyItem inherits Rectangle {
 
             HorizontalLayout {
                 alignment: start;
-                spacing: entry.translation-text.is-empty ? 0 : Theme.spacing * 2;
+                spacing: entry-cache.translation-text.is-empty ? 0 : Theme.spacing * 2;
 
                 orginal-input := ClickAndEditLabel {
                     use-fixed-width: true;
                     width: parent.width - parent.spacing;
-                    text: entry.original-text;
+                    text: entry-cache.original-text;
                     is-edit: root.is-edit;
                     wrap: word-wrap;
                     text-color: Theme.primary-text-color;
+                    is-edit-beaking-text-binding: false;
+
+                    accepted(text) => {
+                        is-unsaved = false;
+                        root.is-edit = false;
+                        Logic.save-subtitle(index, entry-cache);
+                    }
 
                     edited(text) => {
-                        entry.original-text = text;
+                        entry-cache.original-text = text;
                         update-unsaved-status();
                     }
 
@@ -496,7 +497,7 @@ component BodyItem inherits Rectangle {
                 }
             }
 
-            if !entry.correction-text.is-empty: Rectangle {
+            if !entry-cache.correction-text.is-empty: Rectangle {
                 background: Theme.thirdly-background;
                 border-radius: Theme.border-radius;
 
@@ -520,7 +521,7 @@ component BodyItem inherits Rectangle {
                         }
 
                         Label {
-                            text: entry.correction-text;
+                            text: entry-cache.correction-text;
                             wrap: word-wrap;
                         }
                     }
@@ -528,26 +529,20 @@ component BodyItem inherits Rectangle {
                     CancelAndConfirmIconsBtn {
                         cancel-tip: Logic.tr("reject");
                         confirm-tip: Logic.tr("accept");
-                        is-hide-confirm-btn: entry.original-text == entry.correction-text;
+                        is-hide-confirm-btn: entry-cache.original-text == entry-cache.correction-text;
 
                         cancelled => {
                             Logic.reject-subtitle-correction(index);
-
-                            // FIXME:
-                            //  Already cleaned `correction-text` in abvoe function.
-                            //  However, the `entry` is not updated. So I clean it again.
-                            entry.correction-text = "";
                         }
 
                         confirmed => {
                             Logic.accept-subtitle-correction(index);
-                            entry.correction-text = "";
                         }
                     }
                 }
             }
 
-            if !entry.translation-text.is-empty:  VerticalLayout {
+            if !entry-cache.translation-text.is-empty:  VerticalLayout {
                 padding-top: root.is-edit ? 0 : Theme.padding * 2;
 
                 Rectangle {
@@ -574,7 +569,7 @@ component BodyItem inherits Rectangle {
                             }
 
                             Label {
-                                text: entry.translation-text;
+                                text: entry-cache.translation-text;
                                 wrap: word-wrap;
                             }
                         }
@@ -588,16 +583,12 @@ component BodyItem inherits Rectangle {
 component Body inherits ScrollView {
     in-out property <bool> is-progressing;
 
-    property <TranscribeEntry> current-transcribe-entry: update-current-transcribe-entry(Store.update-transcribe-flag);
-
-    function update-current-transcribe-entry(flag: bool) -> TranscribeEntry {
-        return Store.transcribe-entries[Store.selected-transcribe-sidebar-index];
-    }
+    property <[SubtitleEntry]> subtitle-entries: Store.transcribe-entries[Store.selected-transcribe-sidebar-index].subtitle-entries;
 
     VerticalLayout {
         spacing: Theme.spacing * 2;
 
-        if is-progressing && current-transcribe-entry.subtitle-entries.length <= 0: Rectangle {
+        if is-progressing && subtitle-entries.length <= 0: Rectangle {
             height: 200px;
 
             Skeleton {
@@ -607,7 +598,7 @@ component Body inherits ScrollView {
             }
         }
 
-        for entry[index] in current-transcribe-entry.subtitle-entries: BodyItem {
+        for entry[index] in subtitle-entries: BodyItem {
             index: index;
             entry: entry;
             width: root.width - Theme.scrollbar-size;

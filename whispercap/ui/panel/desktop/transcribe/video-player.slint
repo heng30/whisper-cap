@@ -177,7 +177,7 @@ component Player inherits Rectangle {
 
                 Label {
                     overflow: elide;
-                    text: current-transcribe-entry.is-file-exist ? file-name : Logic.tr("No found") + " " + file-name;
+                    text: current-transcribe-entry.is-file-exist ? file-name : Logic.tr("No found") + ": " + file-name;
                     color: current-transcribe-entry.is-file-exist ? Theme.regular-text-color : Theme.danger-color;
                 }
             }
