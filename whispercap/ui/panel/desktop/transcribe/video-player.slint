@@ -87,7 +87,7 @@ component Player inherits Rectangle {
 
                             sub-lb := Label {
                                 font-size: relative-font-size;
-                                font-family: Logic.system-font-family(subtitle-setting.font-name, Store.system-font-infos, Store.system-font-infos.length, Store.update-video-player-font-name-flag);
+                                font-family: Logic.system-font-family(subtitle-setting.font-name, Store.system-font-infos, Store.system-font-infos.length);
                                 horizontal-alignment: center;
                                 color: subtitle-setting.is-white-font-color ? white : black;
                                 text: texts[0];
@@ -96,6 +96,10 @@ component Player inherits Rectangle {
                                 stroke-width: 1px;
                                 wrap: word-wrap;
                                 width: min(self.preferred-width, root.width);
+
+                                changed font-family => {
+                                    debug("font-family: ", self.font-family);
+                                }
                             }
                         }
                     }
@@ -111,7 +115,7 @@ component Player inherits Rectangle {
 
                             sub-lb-trans := Label {
                                 font-size: relative-font-size;
-                                font-family: Logic.system-font-family(subtitle-setting.font-name, Store.system-font-infos, Store.system-font-infos.length, Store.update-video-player-font-name-flag);
+                                font-family: Logic.system-font-family(subtitle-setting.font-name, Store.system-font-infos, Store.system-font-infos.length);
                                 horizontal-alignment: center;
                                 color: subtitle-setting.is-white-font-color ? white : black;
                                 text: texts[1];

@@ -478,7 +478,6 @@ pub fn init(ui: &AppWindow) {
         let mut entry = store_transcribe_entries!(ui).row_data(index).unwrap();
         entry.subtitle_setting = setting;
         store_transcribe_entries!(ui).set_row_data(index, entry.clone());
-        global_logic!(ui).invoke_toggle_update_video_player_font_name_flag();
 
         update_db_entry(&ui, entry.into());
     });
@@ -550,7 +549,7 @@ pub fn init(ui: &AppWindow) {
         ModelRc::new(names)
     });
 
-    global_logic!(ui).on_system_font_family(move |name, infos, _flag1, _flag2| {
+    global_logic!(ui).on_system_font_family(move |name, infos, _flag1| {
         if let Some(item) = infos.iter().find(|item| item.name == name) {
             item.family.clone()
         } else {

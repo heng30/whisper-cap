@@ -153,7 +153,7 @@ export global Logic {
     callback remove-model(index: int);
 
     pure callback system-font-names(infos: [SystemFontInfo], _flag: int) -> [string];
-    pure callback system-font-family(name: string, infos: [SystemFontInfo], _flag1: int, _flag2: bool) -> string;
+    pure callback system-font-family(name: string, infos: [SystemFontInfo], _flag1: int) -> string;
 
     public pure function progress-type-str(ty: ProgressType) -> string {
         if (ty == ProgressType.Transcribe) {
@@ -257,10 +257,6 @@ export global Logic {
 
     public function toggle-update-video-player-flag() {
         Store.update-video-player-flag = !Store.update-video-player-flag;
-    }
-
-    public function toggle-update-video-player-font-name-flag() {
-        Store.update-video-player-font-name-flag = !Store.update-video-player-font-name-flag;
     }
 
     public function toggle-update-audio-player-flag() {
