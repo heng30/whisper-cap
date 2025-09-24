@@ -8420,6 +8420,7 @@ dependencies = [
  "getrandom 0.3.2",
  "image",
  "kittyaudio",
+ "libc",
  "log",
  "native-dialog",
  "once_cell",

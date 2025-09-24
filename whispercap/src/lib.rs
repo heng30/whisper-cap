@@ -104,6 +104,11 @@ async fn android_main(app: slint::android::AndroidApp) {
 
 #[cfg(feature = "desktop")]
 pub async fn desktop_main() {
+    #[cfg(not(debug_assertions))]
+    {
+        _ = disable_stdout();
+    }
+
     log::debug!("start...");
 
     ui_before().await;
@@ -131,4 +136,30 @@ pub fn main() {
     ui.run().unwrap();
 
     log::debug!("exit...");
+}
+
+#[cfg(feature = "desktop")]
+#[allow(dead_code)]
+fn disable_stdout() -> anyhow::Result<()> {
+    if std::env::var("RUST_LOG").is_err() {
+        // when transcribing video with long duration, it would crash.
+        // I think it's because of too much contents output to STDIO from `whisper-rs` crate.
+        // Hence, I redirect STDIO to /dev/null
+        #[cfg(target_os = "linux")]
+        {
+            use anyhow::Context;
+            use std::os::unix::io::AsRawFd;
+
+            let dev_null = std::fs::OpenOptions::new()
+                .write(true)
+                .open("/dev/null")
+                .with_context(|| "can not open /dev/null")?;
+
+            unsafe {
+                libc::dup2(dev_null.as_raw_fd(), libc::STDOUT_FILENO);
+            }
+        }
+    }
+
+    Ok(())
 }

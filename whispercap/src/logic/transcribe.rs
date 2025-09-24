@@ -1333,6 +1333,7 @@ async fn transcribe(
                 let ui = ui.unwrap();
                 let entry = global_logic!(ui).invoke_current_transcribe_entry();
 
+                #[cfg(debug_assertions)]
                 {
                     let contents = transcribe::subtitle::subtitle_to_srt(&segment);
                     println!("{contents}\n");
