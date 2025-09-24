@@ -11,8 +11,7 @@
 #define COMPANY_NAME "Heng30"
 #define INTERNAL_NAME "whispercap.exe"
 #define FILE_DESCRIPTION                                                       \
-  "It's a simple application that uses whisper models to transcribe videos "   \
-  "or audio into subtitles." // 文件说明
+  "Uses whisper models to transcribe videos or audio into subtitles." // 文件说明
 #define LEGAL_COPYRIGHT                                                        \
   "Copyright 2023-2033 The Heng30 Company Ltd. All rights reserved." // 版权
 #define ORIGINAL_FILE_NAME "whispercap.exe"      // 原始文件名

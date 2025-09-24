@@ -87,7 +87,7 @@ component Player inherits Rectangle {
 
                             sub-lb := Label {
                                 font-size: relative-font-size;
-                                font-family: Logic.system-font-family(subtitle-setting.font-name, Store.system-font_infos, Store.system-font-infos.length);
+                                font-family: Logic.system-font-family(subtitle-setting.font-name, Store.system-font-infos, Store.system-font-infos.length, Store.update-video-player-font-name-flag);
                                 horizontal-alignment: center;
                                 color: subtitle-setting.is-white-font-color ? white : black;
                                 text: texts[0];
@@ -111,7 +111,7 @@ component Player inherits Rectangle {
 
                             sub-lb-trans := Label {
                                 font-size: relative-font-size;
-                                font-family: Logic.system-font-family(subtitle-setting.font-name, Store.system-font-infos, Store.system-font-infos.length);
+                                font-family: Logic.system-font-family(subtitle-setting.font-name, Store.system-font-infos, Store.system-font-infos.length, Store.update-video-player-font-name-flag);
                                 horizontal-alignment: center;
                                 color: subtitle-setting.is-white-font-color ? white : black;
                                 text: texts[1];
