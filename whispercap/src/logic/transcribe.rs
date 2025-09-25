@@ -1976,7 +1976,7 @@ fn replace_subtitles_content(ui: &AppWindow, old_text: SharedString, new_text: S
 }
 
 fn replace_subtitles_all_separator(ui: &AppWindow) {
-    let seps = [',', '.', '?', '，', '。'];
+    let seps = [',', '，', '。'];
     let entry = global_logic!(ui).invoke_current_transcribe_entry();
 
     let subtitles = store_transcribe_subtitle_entries!(entry)
