@@ -5,8 +5,10 @@
 
 [中文文档](./README.zh-CN.md)
 
+[Introduction video](https://youtu.be/j8Qip68JvDI)
+
 ### Introduction
-This is a desktop application that uses the Whisper model to transcribe videos or audio into subtitles. It supports Linux, Windows, and macOS platforms.
+This is a desktop application that uses the Whisper model to transcribe videos or audio into subtitles. It supports Linux, Windows, and MacOS platforms.
 
 ### Features
 - Transcribe audio and video into subtitles

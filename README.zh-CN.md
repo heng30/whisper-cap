@@ -5,8 +5,10 @@
 
 [English Documentation](./README.md)
 
+[介绍视频](https://www.bilibili.com/video/BV1N6nuzzE7X)
+
 ### 简介
-这是一个桌面应用程序，使用**whisper模型**将视频或音频转录为字幕。支持`Linux`、`Windows`和`macOS`平台。
+这是一个桌面应用程序，使用**whisper模型**将视频或音频转录为字幕。支持`Linux`、`Windows`和`MacOS`平台。
 
 ### 功能
 - 转录音频和视频为字幕
