@@ -2,7 +2,7 @@ use crate::{
     config,
     db::{
         self,
-        def::{TranscribeEntry, TRANSCRIBE_TABLE as DB_TABLE},
+        def::{TRANSCRIBE_TABLE as DB_TABLE, TranscribeEntry},
     },
     global_logic, global_store,
     logic::{
@@ -18,13 +18,13 @@ use crate::{
     },
     toast_info, toast_success, toast_warn,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_openai::{
+    Client,
     types::{
         ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
         CreateChatCompletionRequestArgs,
     },
-    Client,
 };
 use ffmpeg::{
     MediaType, SubtitleConfig, VideoExitStatus, VideoFramesIterConfig, VideoMetadata,
@@ -39,15 +39,15 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     sync::{
-        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
         Arc, Mutex,
+        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
     },
 };
 use tokio::{sync::mpsc, task::AbortHandle};
 use transcribe::{
+    SegmentCallbackData,
     subtitle::{self, Subtitle},
     whisper_lang::WhisperLang,
-    SegmentCallbackData,
 };
 use uuid::Uuid;
 
@@ -2087,7 +2087,7 @@ fn optimize_subtitles_timestamp(ui: &AppWindow) {
         match transcribe::vad::trim_start_slient_duration_of_audio(
             &audio_path,
             &timestamps,
-            0.01,
+            0.001,
             get_progress_cancel_signal(),
             move |v| {
                 let (ui_weak, id_duplicate) = (ui_weak_duplicate.clone(), id_duplicate.clone());

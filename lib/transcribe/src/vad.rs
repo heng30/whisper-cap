@@ -1,11 +1,11 @@
 use super::ProgressStatus;
 use crate::wav;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::{
     path::Path,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
 };
 
@@ -52,7 +52,11 @@ impl EnergyVAD {
         }
 
         let rms = self.calculate_rms(samples);
-        // println!("--------- {rms}, {}", self.threshold);
+        // log::debug!(
+        //     "audio samples rms: {rms}, threshold: {}. contain_speech: {}",
+        //     self.threshold,
+        //     rms > self.threshold
+        // );
         rms > self.threshold
     }
 
@@ -110,6 +114,8 @@ impl EnergyVAD {
 
             let frame = &samples[offset..frame_end];
             let is_speech = self.contain_speech(frame);
+
+            // log::debug!("{index}: {is_speech}");
 
             if is_speech {
                 if index == 0 {
@@ -172,7 +178,7 @@ pub fn trim_start_slient_duration_of_audio(
         let segmemt = &audio_samples[start_index..end_index];
         let silent_offset = vad.detect_silent_offset_ms(segmemt);
 
-        // println!("------- {index}: {silent_offset}");
+        // log::debug!("{index}: {silent_offset}");
 
         if silent_offset == 0 {
             output_timestamps.push((*start_ms, *end_ms));
